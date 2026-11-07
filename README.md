@@ -7,7 +7,7 @@
 python -m pip install -r requirements.txt
 python main.py
 ```
-`hand_landmarker.task` must be in this folder.
+For hand tracking, put `hand_landmarker.task` in this folder. If it is missing or MediaPipe Tasks is unavailable, the app starts in mouse mode: move the cursor and hold the left mouse button to draw.
 
 Keys: `q` quit · `p` Free Draw/Game · `m` mouse mode · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear · `d` debug
 
