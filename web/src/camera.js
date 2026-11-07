@@ -32,7 +32,7 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
         audio: false,
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       });
-      // A permission prompt can finish after the user has switched back to mouse.
+      // A permission prompt can finish after the camera request was cancelled.
       if (request !== cameraRequest) {
         stream.getTracks().forEach((track) => track.stop());
         return;
@@ -88,8 +88,8 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
     } catch (error) {
       if (request !== cameraRequest) return;
       cameraError = error instanceof Error ? error.message : String(error);
-      setInputMode("MOUSE");
-      setStatus("Hand tracking could not start. Mouse drawing is ready.");
+      setInputMode("OFF");
+      setStatus("Hand tracking could not start. Check camera access, then enable hand tracking to try again.");
       showToast(`Camera/hand tracking unavailable: ${cameraError}`);
     }
   }

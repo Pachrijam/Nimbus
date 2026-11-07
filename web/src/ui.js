@@ -17,15 +17,15 @@ export function createUI({ canvas, statusText, toast }) {
     const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
     state.game = snapshot;
     if (selectedInput === "HAND") Object.assign(input, snapshot.cursor);
-    canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. In mouse mode, hold the pointer near the drone and drag to draw a route.`);
+    canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two fingers to launch.`);
     if (changed && !freeDraw) {
+      if (selectedInput !== "HAND") {
+        setStatus("Enable hand tracking to draw with your camera.");
+        return;
+      }
       const messages = {
-        READY: selectedInput === "HAND"
-          ? "Draw a route from the drone with one finger, then hold up two fingers to launch."
-          : "Draw a route from the drone. Release to launch.",
-        DRAWING: selectedInput === "HAND"
-          ? "Hold up two fingers when you're ready to launch. Tracking gaps pause your route."
-          : "Release when you're ready to launch.",
+        READY: "Draw a route from the drone with one finger, then hold up two fingers to launch.",
+        DRAWING: "Hold up two fingers when you're ready to launch. Tracking gaps pause your route.",
         FLYING: "Drone launched. Avoid the storms!",
         LANDED: "Delivery complete! Next level loading...",
         CRASHED: "Route failed. Preparing another attempt...",

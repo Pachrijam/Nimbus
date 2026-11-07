@@ -11,8 +11,8 @@ const cameraVideo = document.querySelector("#camera-video");
 const state = {
   game: null,
   connectionError: "",
-  input: { mode: "IDLE", point: null, drawing: false },
-  selectedInput: "MOUSE",
+  input: { mode: "IDLE", point: null },
+  selectedInput: "OFF",
   freeDraw: false,
   freeInk: [],
   activeStroke: null,
@@ -29,7 +29,8 @@ const client = createGameClient({
   onSnapshot: (snapshot) => ui.applySnapshot(state, snapshot),
   onError(message) {
     state.connectionError = message;
-    state.input.drawing = false;
+    state.input.mode = "IDLE";
+    state.input.point = null;
     ui.setStatus(message);
     ui.showToast(message, 15000);
   },
@@ -43,12 +44,8 @@ const camera = createHandTracking({
   showToast: ui.showToast,
 });
 const controls = createControls({
-  canvas,
   gamePanel: document.querySelector(".game-panel"),
-  inputButtons: {
-    mouse: document.querySelector("#mouse-mode"),
-    hand: document.querySelector("#camera-mode"),
-  },
+  handButton: document.querySelector("#camera-mode"),
   state,
   camera,
   queueEvent: client.queueEvent,
@@ -62,19 +59,17 @@ function frame(now) {
   const dt = Math.min((now - previousFrameTime) / 1000, 0.05);
   previousFrameTime = now;
   if (client.connected) {
-    const { input } = state;
-    const event = { dt, paused: state.freeDraw, mode: input.mode, point: input.point };
+    // Always send hand input, including null while the camera is off or unavailable.
+    const event = { dt, paused: state.freeDraw, landmarks: null, cameraAspect: camera.aspectRatio };
     if (state.selectedInput === "HAND") {
       try {
         event.landmarks = camera.handLandmarks();
         event.cameraAspect = camera.aspectRatio;
       } catch (error) {
-        controls.setInputMode("MOUSE");
+        controls.setInputMode("OFF");
+        ui.setStatus("Hand tracking stopped. Enable hand tracking to try again.");
         ui.showToast(`Hand tracking stopped: ${error.message}`);
       }
-    } else {
-      event.mode = input.drawing ? "DRAW" : (input.point ? "HOVER" : "IDLE");
-      input.mode = event.mode;
     }
     client.queueEvent(event);
     controls.updateFreeDraw();

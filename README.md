@@ -26,7 +26,7 @@
 │       ├── app.js          # Browser app entry point and animation loop
 │       ├── camera.js       # Webcam access and hand landmark detection
 │       ├── config.js       # Browser game and display constants
-│       ├── controls.js     # Pointer, keyboard, and free-draw input
+│       ├── controls.js     # Hand tracking controls, keyboard, and free-draw input
 │       ├── game-client.js  # Requests and session updates to server.py
 │       ├── renderer.js     # Canvas rendering
 │       └── ui.js           # Status messages and browser UI updates
@@ -41,7 +41,7 @@
 ### How the pieces fit together
 
 - **Browser version:** `web/src/app.js` connects the camera, controls, renderer,
-  UI, and game client. It sends pointer or hand-landmark input to `server.py`;
+  UI, and game client. It sends hand-landmark input to `server.py`;
   the server creates an isolated game session and applies the shared game logic
   from `game.py`, `gestures.py`, `paths.py`, and `physics.py`. The browser
   renders returned snapshots on the canvas. Camera video is processed locally
@@ -75,10 +75,13 @@ For hand tracking, install MediaPipe in the activated environment and put
 python -m pip install mediapipe
 ```
 
-If the model or MediaPipe is unavailable, the app starts in mouse mode: move
-the cursor and hold the left mouse button to draw.
+Drawing uses hand gestures only. The desktop app requires MediaPipe, the model,
+and a working webcam; if any is unavailable, it exits with setup instructions.
+In the browser, click **Hand tracking** and allow camera access. Draw with one
+index finger, then hold up two fingers to launch. If camera access fails, check
+permissions and click **Hand tracking** again.
 
-Keys: `q` quit · `p` Free Draw/Game · `m` mouse mode · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear · `d` debug
+Keys: `q` quit · `p` Free Draw/Game · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear · `d` debug
 
 ## Browser version (Python-powered)
 

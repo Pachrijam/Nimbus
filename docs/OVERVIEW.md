@@ -42,7 +42,7 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 | other / no hand | `IDLE` | nothing |
 
 ### Keys
-`q` quit · `p` Free Draw/Game · `m` mouse mode · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear ink · `d` debug text
+`q` quit · `p` Free Draw/Game · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear ink · `d` debug text
 
 ---
 
