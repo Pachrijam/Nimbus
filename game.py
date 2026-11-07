@@ -9,10 +9,10 @@ import random
 
 import paths
 import physics
-import visuals
 
 START_RADIUS = 30        # px: the path must start this close to the plane
 STAR_RADIUS = 28
+HAND_FINISH_RADIUS = 60  # px: snap a nearby hand-drawn endpoint to the star
 MIN_PATH_POINTS = 10     # ignore accidental tiny paths
 MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
 PAD_MARGIN = 90          # px from the left edge
@@ -27,13 +27,14 @@ MIN_HEIGHT = 480
 
 
 class Game:
-    def __init__(self, w, h):
+    def __init__(self, w, h, *, headless=False):
         if w < MIN_WIDTH or h < MIN_HEIGHT:
             raise ValueError(
                 f"Game requires a frame at least {MIN_WIDTH}x{MIN_HEIGHT} pixels."
             )
         self.w = w
         self.h = h
+        self.headless = headless
         self.level = 1
         self.score = 0
         self.show_autopilot = False
@@ -43,7 +44,9 @@ class Game:
 
     # ---------- Level setup ----------
     def start_level(self):
-        self.sky = visuals.make_sky(self.w, self.h)
+        if not self.headless:
+            import visuals
+            self.sky = visuals.make_sky(self.w, self.h)
         self.pad = (PAD_MARGIN, self.h // 2)
         if self.level == 1:
             self.star = (self.w - 120, self.h // 2)
@@ -141,7 +144,7 @@ class Game:
         self.start_level()
 
     # ---------- Per-frame update ----------
-    def update(self, mode, point, dt):
+    def update(self, mode, point, dt, *, gesture_input=False):
         self.cursor_mode = mode
         self.cursor_point = point
 
@@ -179,7 +182,7 @@ class Game:
         elif self.state == "FLYING":
             self.update_flight(dt)
 
-        elif self.state in ("LANDED", "CRASHED", "INVALID"):
+        elif self.state in ("LANDED", "CRASHED"):
             self.timer += dt
             if self.timer >= MESSAGE_TIME:
                 if self.state == "LANDED":
@@ -190,10 +193,6 @@ class Game:
     def finish_path(self):
         if len(self.raw_path) < MIN_PATH_POINTS:
             self.retry()
-            return
-        if paths.distance(self.raw_path[-1], self.star) > STAR_RADIUS:
-            self.state = "INVALID"
-            self.timer = 0.0
             return
         smooth = paths.chaikin(self.raw_path)
         self.path = paths.resample(smooth)
@@ -245,6 +244,8 @@ class Game:
 
     # ---------- Drawing ----------
     def draw(self, frame):
+        import visuals
+
         img = self.sky.copy()
 
         visuals.draw_pad(img, self.pad[0], self.pad[1])
@@ -275,8 +276,6 @@ class Game:
             visuals.draw_message(img, "DELIVERED!")
         elif self.state == "CRASHED":
             visuals.draw_message(img, "ROUTE FAILED")
-        elif self.state == "INVALID":
-            visuals.draw_message(img, "ROUTE MUST REACH DESTINATION", 0.8)
 
         visuals.draw_cursor(img, self.cursor_mode, self.cursor_point)
         return img

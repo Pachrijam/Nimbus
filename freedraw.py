@@ -32,6 +32,7 @@ class FreeDraw:
         mask = np.any(self.ink != 0, axis=2)
         output[mask] = self.ink[mask]
         visuals.draw_text(output, "FREE DRAW  -  1 finger: draw   2 fingers: move   c: clear", 10, 35)
+        visuals.draw_text(output, "P or Esc: back to game", 10, 65, scale=0.6)
         return output
 
     def clear(self):

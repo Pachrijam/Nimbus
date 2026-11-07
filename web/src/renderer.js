@@ -1,0 +1,297 @@
+import { WIDTH, HEIGHT } from "./config.js";
+
+export function createRenderer({ canvas, cameraVideo }) {
+  const ctx = canvas.getContext("2d");
+
+  function roundedRect(context, x, y, width, height, radius) {
+    context.beginPath();
+    context.roundRect(x, y, width, height, radius);
+  }
+
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    gradient.addColorStop(0, "#83bad0");
+    gradient.addColorStop(1, "#e5f0e9");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.save();
+    ctx.globalAlpha = 0.11;
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 9; i += 1) {
+      const x = (i * 193 + 60) % WIDTH;
+      const y = 52 + ((i * 71) % 205);
+      ctx.beginPath();
+      ctx.ellipse(x, y, 80, 14, -0.07, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(255,255,255,.16)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < WIDTH; x += 48) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, HEIGHT);
+      ctx.stroke();
+    }
+  }
+
+  function drawCloud(cloud) {
+    ctx.save();
+    ctx.shadowColor = "rgba(40,70,78,.2)";
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = "#f4f6ee";
+    const circles = [
+      [-0.46, 0.14, 0.56], [-0.22, -0.22, 0.63], [0.12, -0.26, 0.7],
+      [0.43, -0.02, 0.54], [0.05, 0.17, 0.65],
+    ];
+    for (const [dx, dy, scale] of circles) {
+      ctx.beginPath();
+      ctx.arc(cloud.x + dx * cloud.r, cloud.y + dy * cloud.r, scale * cloud.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(58,91,105,.24)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cloud.x, cloud.y, cloud.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDestination(x, y, radius) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.shadowColor = "rgba(255,191,76,.6)";
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = "#ffc758";
+    ctx.beginPath();
+    ctx.moveTo(0, radius);
+    ctx.bezierCurveTo(-radius * 0.35, radius * 0.55, -radius * 0.8, 0, -radius * 0.8, -radius * 0.3);
+    ctx.arc(0, -radius * 0.3, radius * 0.8, Math.PI, 0);
+    ctx.bezierCurveTo(radius * 0.8, 0, radius * 0.35, radius * 0.55, 0, radius);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(133,86,20,.55)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = "#fff8e8";
+    ctx.beginPath();
+    ctx.arc(0, -radius * 0.3, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPlane(plane) {
+    ctx.save();
+    ctx.translate(plane.x, plane.y);
+    ctx.rotate(plane.heading);
+    ctx.fillStyle = "#243746";
+    ctx.strokeStyle = "rgba(255,255,255,.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 0);
+    ctx.lineTo(-13, -12);
+    ctx.lineTo(-7, -2);
+    ctx.lineTo(-16, 4);
+    ctx.lineTo(-11, 9);
+    ctx.lineTo(-4, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPath(points, color, width = 3, dashed = false) {
+    if (points.length < 2) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    if (dashed) ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i].x, points[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRoutePreview(game) {
+    const { preview, tight } = game;
+    for (let i = 1; i < preview.length; i += 1) {
+      drawPath([preview[i - 1], preview[i]], tight[i] || tight[i - 1] ? "#e45d53" : "#fff", 4);
+    }
+  }
+
+  function drawHud(game) {
+    ctx.save();
+    ctx.textAlign = "left";
+    roundedRect(ctx, 18, 17, 130, 76, 8);
+    ctx.fillStyle = "rgba(10,31,43,.9)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,199,88,.65)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.font = "500 12px 'DM Mono', monospace";
+    ctx.fillText("MISSION", 34, 39);
+    ctx.fillStyle = "#ffc758";
+    ctx.font = "700 36px 'Space Grotesk', sans-serif";
+    ctx.fillText(String(game.level).padStart(2, "0"), 32, 79, 100);
+
+    roundedRect(ctx, 158, 17, 260, 76, 8);
+    ctx.fillStyle = "rgba(10,31,43,.75)";
+    ctx.fill();
+    ctx.font = "600 15px 'DM Sans', sans-serif";
+    ctx.fillStyle = "#ffe09a";
+    ctx.fillText(`SCORE ${game.score}`, 174, 44);
+    ctx.fillStyle = "rgba(255,255,255,.72)";
+    ctx.font = "12px 'DM Sans', sans-serif";
+    ctx.fillText(`ATTEMPTS ${game.tries}`, 174, 73);
+
+    const start = { x: 342, y: 50 };
+    const length = Math.hypot(game.wind.x, game.wind.y);
+    const angle = length > 1 ? Math.atan2(game.wind.y, game.wind.x) : 0;
+    const end = { x: start.x + Math.cos(angle) * (18 + length * 0.35), y: start.y + Math.sin(angle) * (18 + length * 0.35) };
+    ctx.strokeStyle = "rgba(255,255,255,.8)";
+    ctx.fillStyle = "rgba(255,255,255,.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(end.x - 6 * Math.cos(angle - 0.5), end.y - 6 * Math.sin(angle - 0.5));
+    ctx.lineTo(end.x - 6 * Math.cos(angle + 0.5), end.y - 6 * Math.sin(angle + 0.5));
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = "10px 'DM Mono', monospace";
+    ctx.fillText("WIND", 330, 79);
+    ctx.restore();
+  }
+
+  function drawMessage(text) {
+    ctx.save();
+    ctx.fillStyle = "rgba(8,20,29,.26)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    roundedRect(ctx, WIDTH / 2 - 205, HEIGHT / 2 - 46, 410, 92, 12);
+    ctx.fillStyle = "rgba(10,26,38,.9)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.27)";
+    ctx.stroke();
+    ctx.fillStyle = text === "DELIVERED!" ? "#ffda8b" : "#fff";
+    ctx.font = "600 30px 'Space Grotesk', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(text, WIDTH / 2, HEIGHT / 2 + 10);
+    ctx.restore();
+  }
+
+  function drawCursor(input) {
+    if (!input.point) return;
+    ctx.beginPath();
+    ctx.arc(input.point.x, input.point.y, input.mode === "DRAW" ? 7 : 10, 0, Math.PI * 2);
+    ctx.fillStyle = input.mode === "DRAW" ? "#e6534a" : "rgba(255,255,255,.75)";
+    ctx.strokeStyle = "#263f4c";
+    ctx.lineWidth = input.mode === "DRAW" ? 0 : 2;
+    if (input.mode === "DRAW") ctx.fill();
+    else ctx.stroke();
+  }
+
+  function drawFreeDraw(freeInk, cameraActive) {
+    ctx.fillStyle = "rgba(7,18,29,.74)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    if (cameraActive && cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      ctx.save();
+      ctx.translate(WIDTH, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(cameraVideo, 0, 0, WIDTH, HEIGHT);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "rgba(220,236,237,.12)";
+      ctx.font = "20px 'DM Sans', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Enable your camera to draw over a live view", WIDTH / 2, HEIGHT / 2);
+    }
+    ctx.fillStyle = "rgba(7,18,29,.48)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    for (const stroke of freeInk) drawPath(stroke, "#ff6d68", 8);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#fff";
+    ctx.font = "600 15px 'DM Sans', sans-serif";
+    ctx.fillText("FREE DRAW  ·  C to clear  ·  Esc or P to return to game", 24, 35);
+  }
+
+  function render(state, cameraActive) {
+    const { game, input, connectionError, freeDraw, freeInk, autopilot, debug } = state;
+    if (!game || connectionError) {
+      drawBackground();
+      drawMessage(connectionError ? "CONNECTION LOST" : "CONNECTING...");
+      return;
+    }
+    if (freeDraw) {
+      drawFreeDraw(freeInk, cameraActive);
+      return;
+    }
+    drawBackground();
+    ctx.fillStyle = "#578b70";
+    ctx.fillRect(game.pad.x - 33, game.pad.y + 14, 66, 9);
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    ctx.fillRect(game.pad.x - 40, game.pad.y + 24, 80, 3);
+    drawDestination(game.star.x, game.star.y, game.starRadius);
+    for (const cloud of game.clouds) drawCloud(cloud);
+
+    if (game.state === "DRAWING") drawRoutePreview(game);
+    else if (game.state === "FLYING") drawPath(game.path, "rgba(255,255,255,.86)", 3, true);
+
+    if (game.trail.length > 1) {
+      for (let i = 1; i < game.trail.length; i += 1) {
+        const alpha = i / game.trail.length;
+        ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.7})`;
+        ctx.lineWidth = Math.max(1, alpha * 3);
+        ctx.beginPath();
+        ctx.moveTo(game.trail[i - 1].x, game.trail[i - 1].y);
+        ctx.lineTo(game.trail[i].x, game.trail[i].y);
+        ctx.stroke();
+      }
+    }
+    if (autopilot && game.plane.target) {
+      ctx.strokeStyle = "#e94b4b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(game.plane.x, game.plane.y);
+      ctx.lineTo(game.plane.target.x, game.plane.target.y);
+      ctx.stroke();
+      ctx.fillStyle = "#e94b4b";
+      ctx.beginPath();
+      ctx.arc(game.plane.target.x, game.plane.target.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    drawPlane(game.plane);
+    drawHud(game);
+    drawCursor(input);
+
+    if (game.state === "READY") {
+      ctx.fillStyle = "rgba(14,39,50,.78)";
+      roundedRect(ctx, WIDTH / 2 - 171, HEIGHT - 55, 342, 32, 16);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "12px 'DM Sans', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Start at the drone · release to launch", WIDTH / 2, HEIGHT - 34);
+      ctx.textAlign = "left";
+    } else if (game.state === "LANDED") drawMessage("DELIVERED!");
+    else if (game.state === "CRASHED") drawMessage("ROUTE FAILED");
+
+    if (debug) {
+      ctx.fillStyle = "#0a1926";
+      ctx.font = "12px 'DM Mono', monospace";
+      ctx.fillText(`${game.state} · ${input.mode} · ${input.mode === "DRAW" ? "drawing" : "idle"}`, 18, HEIGHT - 17);
+    }
+  }
+
+  return { render };
+}
