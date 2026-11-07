@@ -108,6 +108,66 @@ If the connection fails, the game stops and asks you to reload.
 Hand tracking loads MediaPipe and its model from the internet and requires
 HTTPS when deployed (localhost is allowed for development).
 
+### Challenge Gemini after delivery
+
+Successful flights now stay on the results screen. Gemini proposes routes for
+the same level, and Python flies each proposal through the same fixed-step
+physics, wind, and moving clouds as the player. The fastest successful proposal
+becomes the benchmark. Both actual flight paths appear on the field; the results
+show flight times, your best time on this level, and AI performance
+(`Gemini flight time / your flight time * 100`). A result above 100% beats Gemini;
+95–100% matches its performance. This is Gemini's **best verified proposal**, not
+a mathematically guaranteed optimal path. Gemini's machine learning generates
+the routes; the simulator computes every metric, not the model.
+
+Press **R / Try to beat Gemini** for the same layout and benchmark, or **N / Next
+level** to continue. Rematches keep your best time without repeatedly awarding
+the level's delivery points. Failed flights still retry automatically.
+
+Put your [Gemini API key](https://ai.google.dev/gemini-api/docs/api-key) in the
+repository-root `.env` file (create it if needed):
+
+```dotenv
+GEMINI_API_KEY=your-api-key
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Then run `python -B server.py`. Both browser and desktop games automatically read
+this file. The key stays on the Python server and is never logged or sent to the
+browser. Explicit process environment variables take precedence over `.env`.
+Alternatively, set them in PowerShell:
+
+```powershell
+$env:GEMINI_API_KEY = "your-api-key"
+$env:GEMINI_MODEL = "gemini-2.5-flash" # optional; this is the default
+python -B server.py
+```
+
+For bash, use `export GEMINI_API_KEY="your-api-key"` before starting the server.
+For deployment, configure these variables in the Python service environment and
+restart the service. `.env` is ignored by Git. Never put the key in `web/` or
+commit it. Desktop `main.py` uses
+the same settings and displays the comparison after landing.
+
+The server uses Gemini's
+[generateContent API and structured JSON output](https://ai.google.dev/api/generate-content)
+through Python's standard library; there is no additional SDK dependency.
+Only level geometry and simulation feedback go to Google, not camera images,
+hand landmarks, or the player's route. Each completed level makes at most two
+API calls (initial proposals and refinement), with a 25-second timeout per call
+and up to six routes per response. Requests run in the background; the player
+can retry or continue while waiting. Results are retained per level for the
+session. Missing keys, API errors, and proposals that fail flight validation
+show an unavailable state without blocking the game or inventing a benchmark.
+API usage is subject to your Gemini account's quotas and billing.
+
+Implementation: `gemini_agent.py` handles proposals and background requests;
+`flight_sim.py` shares deterministic flight rules between players and route
+verification. `tests/test_gemini_agent.py` exercises the integration using mock
+responses, so the test suite needs no API key and makes no paid Gemini calls.
+On Windows with Edge installed, `python -B tests/browser_check.py` also checks
+the results UI and buttons in a hidden browser at desktop and narrow widths.
+
 ### Vultr / nginx
 
 The website now requires the Python process; copying `web/` to a static host

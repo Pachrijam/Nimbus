@@ -21,8 +21,8 @@
       <section class="intro" aria-labelledby="page-title">
         <div>
           <p class="eyebrow">A route-planning game</p>
-          <h1 id="page-title">Draw a path. <span>Fly the mission.</span></h1>
-          <p class="intro-copy">Guide the drone around storm cells and reach the destination. Draw in the air with your hand.</p>
+          <h1 id="page-title">Draw a path. <span>Challenge Gemini.</span></h1>
+          <p class="intro-copy">Draw in the air, dodge the storms, and deliver. Then compare your flight with Gemini's best verified route. Can you beat the AI?</p>
         </div>
       </section>
 
@@ -52,6 +52,29 @@
           <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
         </div>
 
+        <section class="comparison hidden" id="comparison" aria-labelledby="comparison-title">
+          <div class="comparison-heading">
+            <div>
+              <p class="eyebrow">Delivery complete</p>
+              <h2 id="comparison-title">Your flight vs. Gemini</h2>
+            </div>
+            <span class="match-badge" id="match-badge">Planning...</span>
+          </div>
+          <p id="comparison-message" class="comparison-message" role="status" aria-live="polite"></p>
+          <dl class="comparison-metrics">
+            <div><dt>Your flight</dt><dd id="player-time">—</dd></div>
+            <div><dt>Gemini's flight</dt><dd id="ai-time">—</dd></div>
+            <div><dt>AI performance</dt><dd id="match-percent">—</dd></div>
+            <div><dt>Your best this level</dt><dd id="best-time">—</dd></div>
+          </dl>
+          <p class="route-legend"><span class="player-line" aria-hidden="true"></span> Your flight <span class="ai-line" aria-hidden="true"></span> Gemini's flight (dashed)</p>
+          <p class="comparison-note" id="comparison-note">Gemini's routes are tested with the same wind, moving storms, and flight physics.</p>
+          <div class="comparison-actions">
+            <button class="tool-button active" id="challenge-retry" type="button">Try to beat Gemini <kbd>R</kbd></button>
+            <button class="tool-button" id="challenge-next" type="button">Next level <kbd>N</kbd></button>
+          </div>
+        </section>
+
         <div class="panel-footer">
           <p class="status-text" id="status-text" role="status">Enable hand tracking to draw with your camera.</p>
           <div class="quick-controls"><kbd>R</kbd><span>Retry</span><kbd>N</kbd><span>Next level</span><kbd>P</kbd><span>Free draw</span></div>
@@ -69,7 +92,7 @@
         </article>
         <article class="step-card">
           <span class="step-number">03</span>
-          <div><h2>Launch with two fingers</h2><p>Hold up two fingers to launch, wherever your route ends. Reach the gold destination during flight to complete the delivery. Hand tracking gaps pause your route so you can keep drawing.</p></div>
+          <div><h2>Deliver, then challenge Gemini</h2><p>Hold up two fingers to launch. After delivery, compare flight times and routes. Retry the same mission to match or beat Gemini, or choose the next level.</p></div>
         </article>
       </section>
 

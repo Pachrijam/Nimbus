@@ -1,6 +1,8 @@
 import json
+import os
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -15,6 +17,11 @@ def event(mode="IDLE", point=None, dt=0.02, **kwargs):
 
 
 class EngineTests(unittest.TestCase):
+    def setUp(self):
+        environment = patch.dict(os.environ, {"GEMINI_API_KEY": ""})
+        environment.start()
+        self.addCleanup(environment.stop)
+
     def test_browser_and_direct_python_follow_identical_rules(self):
         session = Session()
         direct = game.Game(960, 600, headless=True)

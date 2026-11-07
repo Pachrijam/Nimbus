@@ -3,6 +3,8 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
 
   function retry() { queueEvent({ action: "retry" }); }
   function nextLevel() { queueEvent({ action: "next" }); }
+  document.querySelector("#challenge-retry").addEventListener("click", retry);
+  document.querySelector("#challenge-next").addEventListener("click", nextLevel);
 
   function setInputMode(mode) {
     if (mode !== "HAND") camera.stopCamera();
