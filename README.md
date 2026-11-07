@@ -2,6 +2,57 @@
 
 **Sketch a drone's route in the air with one finger. A physics simulation instantly shows whether the drone can actually fly it through the wind and around the storms.**
 
+## Architecture
+
+### Repository layout
+
+```text
+.
+├── main.py                 # Desktop OpenCV application entry point
+├── server.py               # HTTP API and per-browser game sessions
+├── game.py                 # Game states, levels, scoring, and collisions
+├── physics.py              # Flight movement and steering
+├── paths.py                # Route smoothing, resampling, and turn checks
+├── gestures.py             # Hand landmark gesture recognition
+├── visuals.py              # Desktop game rendering
+├── freedraw.py             # Desktop free-draw mode
+├── requirements.txt        # Python dependencies for the desktop app
+├── web/
+│   ├── index.html          # Browser page and controls
+│   ├── styles.css          # Browser layout and styling
+│   ├── images/
+│   │   └── favicon.png     # Nimbus browser icon
+│   └── src/
+│       ├── app.js          # Browser app entry point and animation loop
+│       ├── camera.js       # Webcam access and hand landmark detection
+│       ├── config.js       # Browser game and display constants
+│       ├── controls.js     # Pointer, keyboard, and free-draw input
+│       ├── game-client.js  # Requests and session updates to server.py
+│       ├── renderer.js     # Canvas rendering
+│       └── ui.js           # Status messages and browser UI updates
+├── tests/
+│   ├── test_gestures.py    # Gesture recognition tests
+│   └── test_server.py      # Game engine and HTTP API tests
+└── documentation/
+    ├── OVERVIEW.md         # Project overview and design
+    └── STEPS.md            # Development tasks and checkpoints
+```
+
+### How the pieces fit together
+
+- **Browser version:** `web/src/app.js` connects the camera, controls, renderer,
+  UI, and game client. It sends pointer or hand-landmark input to `server.py`;
+  the server creates an isolated game session and applies the shared game logic
+  from `game.py`, `gestures.py`, `paths.py`, and `physics.py`. The browser
+  renders returned snapshots on the canvas. Camera video is processed locally
+  and is not sent to the server.
+- **Desktop version:** `main.py` captures and mirrors webcam frames, runs
+  MediaPipe hand tracking when available, and sends gestures to `game.Game` or
+  `freedraw.FreeDraw`. The game uses `paths.py` and `physics.py`; `visuals.py`
+  draws the result with OpenCV.
+- **Deployment:** Nginx serves HTTPS and reverse-proxies requests to the
+  `server.py` process on `127.0.0.1:8000`. See the Vultr instructions below.
+
 ## Run
 
 Create and activate a virtual environment so packages are installed separately
