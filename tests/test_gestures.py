@@ -103,10 +103,13 @@ class GestureTests(unittest.TestCase):
 
     def test_uncertain_index_estimate_does_not_cut_stroke(self):
         self.sample(hand(), 3)
-        uncertain = hand()
-        uncertain[8].y = uncertain[6].y - 0.01
+        uncertain = depth_hand(tilt=math.radians(85))
+        # Depth noise can shorten the extended index and lengthen the folded middle.
+        uncertain[8].z = uncertain[6].z * 0.9
+        uncertain[12].z = uncertain[10].z * 1.25
         for _ in range(20):
             self.assertEqual(self.sample(uncertain)[0], "DRAW")
+            self.assertEqual(self.tracker["candidate"], "DRAW")
         self.assertEqual(self.sample(hand(folded=True), 6)[0], "IDLE")
 
     def test_missing_frames_do_not_complete_pending_release(self):
