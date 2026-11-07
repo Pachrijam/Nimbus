@@ -35,16 +35,36 @@ def get_gesture(landmarks, w, h):
     returns: (mode, (x, y)) with (x, y) in integer pixels, or (mode, None)
     """
     if landmarks is None:
-        # TODO (Avyay): reset the smoothing so the point doesn't glide in from the old spot
+        state["mode"] = "IDLE"
+        state["candidate"] = "IDLE"
+        state["count"] = 0
+        state["smooth"] = None
         return "IDLE", None
 
     tip = landmarks[INDEX_TIP]
-    print("tip y:", round(landmarks[8].y, 2), " knuckle y:", round(landmarks[6].y,2))
-    x = int(tip.x * w)
-    y = int(tip.y * h)
+    x = max(0, min(w - 1, tip.x * w))
+    y = max(0, min(h - 1, tip.y * h))
 
-    # TODO (Avyay): finger-up checks (tip y < joint y)  -> raw mode
-    # TODO (Avyay): debouncing with state["candidate"] / state["count"]
-    # TODO (Avyay): smoothing with state["smooth"] and SMOOTHING
+    index_up = tip.y < landmarks[INDEX_PIP].y
+    middle_up = landmarks[MIDDLE_TIP].y < landmarks[MIDDLE_PIP].y
+    if index_up and middle_up:
+        raw_mode = "HOVER"
+    elif index_up:
+        raw_mode = "DRAW"
+    else:
+        raw_mode = "IDLE"
 
-    return "HOVER", (x, y)
+    if raw_mode == state["candidate"]:
+        state["count"] += 1
+    else:
+        state["candidate"] = raw_mode
+        state["count"] = 1
+    if state["count"] >= DEBOUNCE_FRAMES:
+        state["mode"] = raw_mode
+
+    if state["smooth"] is not None:
+        old_x, old_y = state["smooth"]
+        x = SMOOTHING * x + (1 - SMOOTHING) * old_x
+        y = SMOOTHING * y + (1 - SMOOTHING) * old_y
+    state["smooth"] = (x, y)
+    return state["mode"], (int(x), int(y))

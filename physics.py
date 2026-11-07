@@ -45,26 +45,73 @@ def wrap_angle(a):
 
 
 def step_pursuit(plane, path, wind, dt):
-    """TODO (Avyay), in order:
-    A. update plane["i"]: closest path point, searching forward only (SEARCH_WINDOW)
-    B. look-ahead point: walk forward from i until a point is >= LOOKAHEAD from the plane
-       (or use the last point); store it in plane["target"]
-       -> after the last path point is reached, stop steering and fly straight
-    C. desired = atan2(target_y - y, target_x - x)
-    D. error = wrap_angle(desired - heading)
-    E. turn_rate = K_STEER * error, clamped to +-MAX_TURN; heading += turn_rate * dt
-    F. move (below), including wind
-    Placeholder: flies straight with wind.
-    """
+    """Steer toward a point ahead on the route, then apply speed and wind."""
+    plane["target"] = None
+    if path and plane["i"] < len(path):
+        closest = plane["i"]
+        best_distance = float("inf")
+        stop = min(len(path), closest + SEARCH_WINDOW)
+        for i in range(closest, stop):
+            dx = path[i][0] - plane["x"]
+            dy = path[i][1] - plane["y"]
+            distance_squared = dx * dx + dy * dy
+            if distance_squared < best_distance:
+                best_distance = distance_squared
+                closest = i
+        plane["i"] = closest
+
+        finished = False
+        if closest == len(path) - 1:
+            finished = math.hypot(path[-1][0] - plane["x"],
+                                  path[-1][1] - plane["y"]) <= max(8, plane["speed"] * dt)
+            if len(path) > 1:
+                # A positive dot product means we have passed the endpoint.
+                dx = path[-1][0] - path[-2][0]
+                dy = path[-1][1] - path[-2][1]
+                if dx * dx + dy * dy > 0:
+                    passed = ((plane["x"] - path[-1][0]) * dx +
+                              (plane["y"] - path[-1][1]) * dy) >= 0
+                    finished = finished or passed
+
+        if finished:
+            plane["i"] = len(path)
+        else:
+            target = path[-1]
+            for i in range(closest, len(path)):
+                dx = path[i][0] - plane["x"]
+                dy = path[i][1] - plane["y"]
+                if dx * dx + dy * dy >= LOOKAHEAD * LOOKAHEAD:
+                    target = path[i]
+                    break
+            plane["target"] = target
+            desired = math.atan2(target[1] - plane["y"], target[0] - plane["x"])
+            error = wrap_angle(desired - plane["heading"])
+            turn_rate = max(-MAX_TURN, min(MAX_TURN, K_STEER * error))
+            plane["heading"] = wrap_angle(plane["heading"] + turn_rate * dt)
+
     plane["x"] += (plane["speed"] * math.cos(plane["heading"]) + wind[0]) * dt
     plane["y"] += (plane["speed"] * math.sin(plane["heading"]) + wind[1]) * dt
 
 
 def step_exact(plane, path, dt):
-    """Fallback: move along the path points at SPEED, no physics, no wind.
-    TODO (Person 3): move plane["i"] forward by SPEED * dt / spacing points,
-    set x, y to that point, heading = atan2 toward the next point.
-    After the last point, keep flying straight.
-    Placeholder: flies straight."""
-    plane["x"] += plane["speed"] * math.cos(plane["heading"]) * dt
-    plane["y"] += plane["speed"] * math.sin(plane["heading"]) * dt
+    """Use a distance budget to follow segments exactly, then fly straight."""
+    remaining = plane["speed"] * dt
+    plane["target"] = None
+    while plane["i"] < len(path):
+        target = path[plane["i"]]
+        dx = target[0] - plane["x"]
+        dy = target[1] - plane["y"]
+        length = math.hypot(dx, dy)
+        if length > 0:
+            plane["heading"] = math.atan2(dy, dx)
+        if length > remaining:
+            plane["x"] += dx * remaining / length
+            plane["y"] += dy * remaining / length
+            plane["target"] = target
+            return
+        plane["x"], plane["y"] = target
+        remaining -= length
+        plane["i"] += 1
+
+    plane["x"] += remaining * math.cos(plane["heading"])
+    plane["y"] += remaining * math.sin(plane["heading"])

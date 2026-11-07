@@ -2,6 +2,7 @@
 Simple free-draw mode: warm-up for judges and a backup demo.
 Owner: Paul (keep it small: about 30-45 minutes)
 """
+import cv2
 import numpy as np
 
 import visuals
@@ -15,17 +16,24 @@ class FreeDraw:
         self.prev_point = None
 
     def update(self, mode, point):
-        # TODO (Paul): in DRAW mode with a point, draw a line from prev_point to point on self.ink
-        # (cv2.line with cv2.LINE_AA), then prev_point = point.
-        # In any other mode, set prev_point back to None.
-        pass
+        if mode == "DRAW" and point is not None:
+            if self.prev_point is None:
+                cv2.circle(self.ink, point, self.thickness // 2,
+                           self.color, -1, cv2.LINE_AA)
+            else:
+                cv2.line(self.ink, self.prev_point, point, self.color,
+                         self.thickness, cv2.LINE_AA)
+            self.prev_point = point
+        else:
+            self.prev_point = None
 
     def draw(self, frame):
-        # TODO (Paul): combine self.ink with the camera frame using a mask
-        # (pixels with ink show the ink, everything else shows the camera).
         output = frame.copy()
+        mask = np.any(self.ink != 0, axis=2)
+        output[mask] = self.ink[mask]
         visuals.draw_text(output, "FREE DRAW  -  1 finger: draw   2 fingers: move   c: clear", 10, 35)
         return output
 
     def clear(self):
         self.ink[:] = 0
+        self.prev_point = None
