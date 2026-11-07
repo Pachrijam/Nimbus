@@ -28,8 +28,8 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
     setStatus(state.selectedInput !== "HAND"
       ? "Enable hand tracking to draw with your camera."
       : state.freeDraw
-        ? "Free draw: sketch with one finger. C clears; Back to game, Esc, or P exits."
-        : "Draw a route from the drone with one finger, then hold up two fingers to launch.");
+        ? "Free draw: pinch thumb and index finger to sketch; open to stop. C clears; Esc or P exits."
+        : "Pinch thumb and index finger to draw from the drone. Open the pinch to launch.");
   }
 
   document.querySelector("#free-draw").addEventListener("click", () => setFreeDraw(!state.freeDraw));

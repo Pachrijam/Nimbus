@@ -2,7 +2,7 @@
 
 **HackRPI 2026 · Theme: "In The Clouds" · Team: Avyay, Paul, Person 3**
 
-> **Sketch a drone's route in the air with one finger. A physics simulation instantly shows whether the drone can actually fly it through the wind and around the storms.**
+> **Pinch your thumb and index finger to sketch a drone's route in the air. A physics simulation instantly shows whether the drone can actually fly it through the wind and around the storms.**
 
 ---
 
@@ -11,7 +11,7 @@ Planning a route for a drone (deliveries, inspections, search and rescue) means 
 
 ## 2. Our solution
 A touchless, webcam-only route planner and simulator:
-1. **Sketch** the route in the air with your index finger. No mouse, touchscreen or hardware.
+1. **Sketch** the route in the air by pinching your thumb and index finger together.
 2. **See infeasible turns immediately:** any part of the route tighter than the drone's minimum turn radius turns **red** while you draw.
 3. **Launch** the route. A simulated drone flies it under **real path-following control** (pure pursuit) with a **turn-rate limit** and **wind**.
 4. **Outcome:** **DELIVERED** at the destination, or **ROUTE FAILED** (hit a storm cell, swung wide on a turn too tight, or blown off course).
@@ -27,8 +27,8 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 
 ## 4. User experience (walkthrough)
 1. The screen shows a **sky** with a **drone** on a launch pad (left), **storm cells** (clouds) in between, a **destination** (right), a **wind arrow** in the HUD, and a small **live camera view** in the top-right corner.
-2. The user raises their **index finger** near the drone and draws a route. The route is **smoothed live**; any too-tight turn shows **red**.
-3. The user raises **two fingers** to release, and the drone **launches**.
+2. The user **pinches their thumb and index finger** near the drone and draws a route. The route is **smoothed live**; any too-tight turn shows **red**.
+3. The user **opens the pinch** to release, and the drone **launches**.
 4. The drone follows the route, **banking smoothly**, **drifting in wind** and **correcting back**. Storm cells may **drift** across the route mid-flight.
 5. **DELIVERED!** shows the score, then the next level. Or **ROUTE FAILED** with a crash effect, then a retry of the same layout.
 6. Press `v` for the **autopilot view**: a red dot shows exactly where the controller is aiming.
@@ -37,9 +37,9 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 ### Gestures
 | Hand | Mode | Effect |
 |---|---|---|
-| ☝ index finger up | `DRAW` | draw route / ink |
-| ✌ index + middle up | `HOVER` | move without drawing; **releases the route** |
-| other / no hand | `IDLE` | nothing |
+| thumb + index pinched | `DRAW` | draw route / ink |
+| thumb + index apart | `HOVER` | move without drawing; **releases the route** |
+| no usable hand | `IDLE` | pause the route after a short tracking grace period |
 
 ### Keys
 `q` quit · `p` Free Draw/Game · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear ink · `d` debug text
@@ -71,9 +71,9 @@ Rules: the route must start within **40 px** of the drone; routes under **10 poi
 - A real clock (`time.monotonic`) supplies increasing timestamps for MediaPipe and **`dt`** (seconds per frame, capped at 0.05) for physics.
 
 ### 6.2 Gesture recognition (`gestures.py`)
-- **Finger up:** fingertip y < middle-joint y (screen y grows downward). Index 8 vs 6; middle 12 vs 10.
-- **Debouncing:** a new mode must hold **3 consecutive frames** (about 0.1 s) to take effect. A small state machine (`mode`, `candidate`, `count`).
-- **Smoothing:** exponential moving average, `smooth = 0.4 · raw + 0.6 · smooth`, a first-order low-pass filter. Reset when the hand reappears.
+- **Pinch:** 3D thumb-tip/index-tip distance (landmarks 4 and 8), divided by palm size. Close below 0.30; open at 0.45. The index fingertip controls the cursor.
+- **Debouncing:** entering a pinch takes 0.05 s; releasing takes 0.18 s. The last drawing point stays held during release. Missing tracking pauses the route.
+- **Smoothing:** adaptive exponential smoothing reduces jitter while still and responds faster during movement.
 
 ### 6.3 Path processing (`paths.py`)
 1. **Chaikin smoothing** (2 iterations): each segment P→Q becomes points at 25% and 75%; endpoints kept. Turns a jagged hand path into a smooth curve.
@@ -143,7 +143,7 @@ webcam ─> main.py ─> MediaPipe ─> gestures.get_gesture() ─> (mode, point
 | File | Owner | Responsibility |
 |---|---|---|
 | `main.py` | shared (announce changes) | camera, MediaPipe, clock, input, keys, mode switching |
-| `gestures.py` | **Avyay** | finger-up checks, debouncing, smoothing |
+| `gestures.py` | **Avyay** | pinch detection, debouncing, smoothing |
 | `physics.py` | **Avyay** (`step_exact`: Person 3) | pure pursuit, turn limit, wind |
 | `freedraw.py` | **Paul** | free-draw mode |
 | `visuals.py` | **Paul** | all rendering and effects |
@@ -187,7 +187,7 @@ webcam ─> main.py ─> MediaPipe ─> gestures.get_gesture() ─> (mode, point
 
 ### Known limitations (say them before judges find them)
 - 2D model only; no altitude, battery or real aerodynamics.
-- Hand tracking needs decent lighting; a tilted hand can confuse the finger-up check.
+- Hand tracking needs decent lighting and a clear view of the thumb and index fingertips.
 - Sky scene instead of real maps.
 
 ## 10. What's next (freshman year)

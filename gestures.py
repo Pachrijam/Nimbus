@@ -3,9 +3,9 @@ Hand landmarks -> (mode, point).
 Owner: Avyay
  
 Modes:
-  "DRAW"   index finger up only        -> draw the flight path
-  "HOVER"  index + middle fingers up   -> move without drawing (releases the path)
-  "IDLE"   anything else, or no hand
+  "DRAW"   thumb and index pinched together -> draw the flight path
+  "HOVER"  thumb and index apart            -> move without drawing (releases the path)
+  "IDLE"   no usable hand
  
 Fixes for smooth air-drawing:
   1. Active zone       - the middle of the camera maps to the whole screen (no arm stretching)
@@ -19,10 +19,11 @@ import math
  
 # MediaPipe landmark numbers
 WRIST = 0
-INDEX_PIP = 6
+THUMB_TIP = 4
+INDEX_MCP = 5
 INDEX_TIP = 8
-MIDDLE_PIP = 10
-MIDDLE_TIP = 12
+MIDDLE_MCP = 9
+PINKY_MCP = 17
  
 # 1. Active zone: this part of the camera image (0..1) covers the whole screen
 ZONE_LEFT = 0.20
@@ -30,13 +31,10 @@ ZONE_RIGHT = 0.80
 ZONE_TOP = 0.15
 ZONE_BOTTOM = 0.75
  
-# 2. Finger-up thresholds: tip distance / knuckle distance (from the wrist)
-INDEX_UP_RATIO = 1.10     # index counts as up above this
-MIDDLE_UP_RATIO = 1.35    # middle must be clearly up -> fewer accidental launches
- 
-# Hysteresis keeps uncertain finger estimates from toggling the gesture.
-INDEX_DOWN_RATIO = 0.85   # tolerate depth noise while the index is already extended
-MIDDLE_DOWN_RATIO = 1.10
+# 2. Thumb/index distance relative to palm size, independent of camera distance.
+# Separate thresholds prevent small tracking fluctuations from releasing a pinch.
+PINCH_CLOSE_RATIO = 0.30
+PINCH_OPEN_RATIO = 0.45
 
 # Debounce in seconds: camera/display frame rates must not affect release timing.
 ENTER_TIME = 0.05
@@ -65,8 +63,7 @@ def reset_gesture(tracker=None):
         "smooth": None,          # smoothed (x, y) floats, or None
         "draw_point": None,      # last confirmed DRAW point for the release hold
         "lost": 0.0,
-        "index_up": False,
-        "middle_up": False,
+        "pinching": False,
     })
  
  
@@ -90,13 +87,15 @@ def pixel_dist(a, b, w, h):
                       (getattr(a, "z", 0.0) - getattr(b, "z", 0.0)) * w)
  
  
-def finger_ratio(landmarks, tip, pip, w, h):
-    """How extended a finger is: >1 means the tip is farther from the wrist than the knuckle."""
-    wrist = landmarks[WRIST]
-    d_pip = pixel_dist(landmarks[pip], wrist, w, h)
-    if d_pip < 1e-9:
-        return 0.0
-    return pixel_dist(landmarks[tip], wrist, w, h) / d_pip
+def pinch_ratio(landmarks, aspect):
+    """3D fingertip gap divided by palm size; None for a degenerate hand."""
+    palm_size = max(
+        pixel_dist(landmarks[WRIST], landmarks[MIDDLE_MCP], aspect, 1),
+        pixel_dist(landmarks[INDEX_MCP], landmarks[PINKY_MCP], aspect, 1),
+    )
+    if palm_size < 1e-9:
+        return None
+    return pixel_dist(landmarks[THUMB_TIP], landmarks[INDEX_TIP], aspect, 1) / palm_size
  
  
 def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None):
@@ -109,8 +108,11 @@ def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None)
     if not state:
         reset_gesture(state)
     dt = max(0.0, min(dt, 0.1))
+    # Use source image proportions, not the stretched game canvas.
+    aspect = w / h if camera_aspect is None else camera_aspect
+    ratio = None if landmarks is None else pinch_ratio(landmarks, aspect)
     # ---- 5. No hand: short grace period, then reset ----
-    if landmarks is None:
+    if ratio is None:
         state["lost"] += dt
         # A missing frame cannot count toward a deliberate release.
         state["candidate"] = state["mode"]
@@ -128,20 +130,9 @@ def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None)
     x = to_screen(tip.x, ZONE_LEFT, ZONE_RIGHT, w)
     y = to_screen(tip.y, ZONE_TOP, ZONE_BOTTOM, h)
  
-    # Use source image proportions, not the stretched game canvas.
-    aspect = w / h if camera_aspect is None else camera_aspect
-    index_threshold = INDEX_DOWN_RATIO if state["index_up"] else INDEX_UP_RATIO
-    middle_threshold = MIDDLE_DOWN_RATIO if state["middle_up"] else MIDDLE_UP_RATIO
-    index_up = finger_ratio(landmarks, INDEX_TIP, INDEX_PIP, aspect, 1) > index_threshold
-    middle_up = finger_ratio(landmarks, MIDDLE_TIP, MIDDLE_PIP, aspect, 1) > middle_threshold
-    state["index_up"], state["middle_up"] = index_up, middle_up
- 
-    if index_up and not middle_up:
-        raw_mode = "DRAW"
-    elif index_up and middle_up:
-        raw_mode = "HOVER"
-    else:
-        raw_mode = "IDLE"
+    threshold = PINCH_OPEN_RATIO if state["pinching"] else PINCH_CLOSE_RATIO
+    state["pinching"] = ratio < threshold
+    raw_mode = "DRAW" if state["pinching"] else "HOVER"
  
     # ---- 3. Debouncing (sticky DRAW) ----
     if raw_mode == state["candidate"]:

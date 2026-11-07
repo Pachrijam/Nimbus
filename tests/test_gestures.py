@@ -5,13 +5,15 @@ import unittest
 import gestures
 
 
-def hand(*, middle=False, folded=False, angle=0, offset=0):
+def hand(*, pinched=True, middle=False, folded=False, angle=0, offset=0):
     points = [(0.5, 0.7)] * 21
     points[0] = (0.5, 0.9)
     points[5], points[6] = (0.45, 0.7), (0.45, 0.55)
     points[8] = (0.45, 0.75 if folded else 0.35)
     points[9], points[10] = (0.55, 0.7), (0.55, 0.55)
     points[12] = (0.55, 0.35 if middle else 0.75)
+    points[17] = (0.65, 0.7)
+    points[4] = (points[8][0] + 0.01, points[8][1]) if pinched else (0.2, 0.6)
     c, s = math.cos(angle), math.sin(angle)
     return [SimpleNamespace(
         x=0.5 + (x - 0.5) * c - (y - 0.5) * s + offset,
@@ -19,14 +21,14 @@ def hand(*, middle=False, folded=False, angle=0, offset=0):
     ) for x, y in points]
 
 
-def depth_hand(*, tilt=0, scale=1, middle=False, folded=False, aspect=1):
+def depth_hand(*, tilt=0, scale=1, pinched=True, aspect=1):
     """Rotate a hand toward the lens, then change its apparent size."""
     c, s = math.cos(tilt), math.sin(tilt)
     return [SimpleNamespace(
         x=0.5 + scale * (p.x - 0.5) / aspect,
         y=0.7 + scale * (p.y - 0.9) * c,
         z=scale * (p.y - 0.9) * s / aspect,
-    ) for p in hand(middle=middle, folded=folded)]
+    ) for p in hand(pinched=pinched)]
 
 
 class GestureTests(unittest.TestCase):
@@ -41,14 +43,19 @@ class GestureTests(unittest.TestCase):
 
     def test_rotated_hands_keep_same_gestures(self):
         for angle in (0, math.pi / 2, math.pi, -math.pi / 2):
-            for middle, expected in ((False, "DRAW"), (True, "HOVER")):
-                with self.subTest(angle=angle, middle=middle):
+            for pinched, expected in ((True, "DRAW"), (False, "HOVER")):
+                with self.subTest(angle=angle, pinched=pinched):
                     gestures.reset_gesture(self.tracker)
-                    self.assertEqual(self.sample(hand(angle=angle, middle=middle), 3)[0], expected)
+                    self.assertEqual(self.sample(hand(angle=angle, pinched=pinched), 3)[0], expected)
 
-    def test_folded_index_does_not_draw(self):
+    def test_raised_index_without_pinch_does_not_draw(self):
         for angle in (0, math.pi / 2, math.pi):
-            self.assertEqual(self.sample(hand(folded=True, angle=angle), 10)[0], "IDLE")
+            self.assertEqual(self.sample(hand(pinched=False, angle=angle), 10)[0], "HOVER")
+
+    def test_pinch_does_not_require_extended_fingers(self):
+        for folded in (False, True):
+            for middle in (False, True):
+                self.assertEqual(self.sample(hand(folded=folded, middle=middle), 3)[0], "DRAW")
 
     def test_brief_loss_holds_position_then_recovers(self):
         drawing = self.sample(hand(), 3)
@@ -58,17 +65,17 @@ class GestureTests(unittest.TestCase):
 
     def test_release_requires_stable_gesture(self):
         self.sample(hand(), 3)
-        self.assertEqual(self.sample(hand(middle=True), 2)[0], "DRAW")
+        self.assertEqual(self.sample(hand(pinched=False), 2)[0], "DRAW")
         self.assertEqual(self.sample(hand())[0], "DRAW")
-        self.assertEqual(self.sample(hand(middle=True), 6)[0], "HOVER")
+        self.assertEqual(self.sample(hand(pinched=False), 6)[0], "HOVER")
 
     def test_release_timing_is_consistent_across_frame_rates(self):
         for fps in (20, 30, 60):
             with self.subTest(fps=fps):
                 gestures.reset_gesture(self.tracker)
                 self.sample(hand(), fps // 5, dt=1 / fps)
-                self.assertEqual(self.sample(hand(middle=True), fps // 10, dt=1 / fps)[0], "DRAW")
-                self.assertEqual(self.sample(hand(middle=True), fps // 5, dt=1 / fps)[0], "HOVER")
+                self.assertEqual(self.sample(hand(pinched=False), fps // 10, dt=1 / fps)[0], "DRAW")
+                self.assertEqual(self.sample(hand(pinched=False), fps // 5, dt=1 / fps)[0], "HOVER")
 
     def test_cursor_follows_movement_without_long_smoothing_delay(self):
         _, start = self.sample(hand(), 3)
@@ -92,31 +99,44 @@ class GestureTests(unittest.TestCase):
                         self.assertEqual(self.sample(pose)[0], "DRAW")
                         self.assertEqual(self.tracker["candidate"], "DRAW")
 
-    def test_depth_still_allows_intentional_release_and_fold(self):
+    def test_depth_still_allows_intentional_pinch_release(self):
         for degrees in (0, 60, 89):
             with self.subTest(degrees=degrees):
                 gestures.reset_gesture(self.tracker)
                 tilt = math.radians(degrees)
                 self.sample(depth_hand(tilt=tilt), 3)
-                self.assertEqual(self.sample(depth_hand(tilt=tilt, middle=True), 6)[0], "HOVER")
-                self.assertEqual(self.sample(depth_hand(tilt=tilt, folded=True), 6)[0], "IDLE")
+                self.assertEqual(self.sample(depth_hand(tilt=tilt, pinched=False), 6)[0], "HOVER")
 
-    def test_uncertain_index_estimate_does_not_cut_stroke(self):
+    def test_pinch_hysteresis_prevents_jitter_from_toggling_draw(self):
+        uncertain = hand()
+        palm_size = math.hypot(0.05, 0.2)
+        uncertain[4].x = uncertain[8].x + 0.37 * palm_size
+        # The same intermediate gap cannot start a pinch, but keeps one held.
+        self.assertEqual(self.sample(uncertain, 10)[0], "HOVER")
         self.sample(hand(), 3)
-        uncertain = depth_hand(tilt=math.radians(85))
-        # Depth noise can shorten the extended index and lengthen the folded middle.
-        uncertain[8].z = uncertain[6].z * 0.9
-        uncertain[12].z = uncertain[10].z * 1.25
         for _ in range(20):
             self.assertEqual(self.sample(uncertain)[0], "DRAW")
             self.assertEqual(self.tracker["candidate"], "DRAW")
-        self.assertEqual(self.sample(hand(folded=True), 6)[0], "IDLE")
+        self.assertEqual(self.sample(hand(pinched=False), 6)[0], "HOVER")
+
+    def test_depth_separated_fingertips_do_not_count_as_pinched(self):
+        pose = depth_hand()
+        pose[4].x, pose[4].y = pose[8].x, pose[8].y
+        pose[4].z = pose[8].z + 0.15
+        self.assertEqual(self.sample(pose, 3)[0], "HOVER")
+
+    def test_degenerate_hand_is_tracking_loss_not_a_pinch_or_release(self):
+        invalid = [SimpleNamespace(x=0.5, y=0.5, z=0) for _ in range(21)]
+        self.assertEqual(self.sample(invalid, 3), ("IDLE", None))
+        drawing = self.sample(hand(), 3)
+        self.assertEqual(self.sample(invalid, 3), drawing)
+        self.assertEqual(self.sample(invalid, 10), ("IDLE", None))
 
     def test_missing_frames_do_not_complete_pending_release(self):
         drawing = self.sample(hand(), 3)
-        self.assertEqual(self.sample(hand(middle=True, offset=0.1), 3), drawing)
+        self.assertEqual(self.sample(hand(pinched=False, offset=0.1), 3), drawing)
         self.assertEqual(self.sample(None, 4), drawing)
-        self.assertEqual(self.sample(hand(middle=True), 2)[0], "DRAW")
+        self.assertEqual(self.sample(hand(pinched=False), 2)[0], "DRAW")
         self.assertEqual(self.sample(hand())[0], "DRAW")
 
     def test_source_aspect_is_independent_of_canvas_size(self):
