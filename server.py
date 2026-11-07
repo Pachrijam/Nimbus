@@ -27,7 +27,8 @@ def point(value):
 class Session:
     def __init__(self):
         self.game = game.Game(WIDTH, HEIGHT, headless=True)
-        self.gesture = {"mode": "IDLE", "candidate": "IDLE", "count": 0, "smooth": None}
+        self.gesture = {}
+        gestures.reset_gesture(self.gesture)
         self.touched = time.monotonic()
         self.lock = threading.Lock()
         self.cursor = ("IDLE", None)
@@ -47,9 +48,9 @@ class Session:
                 hand = None if landmarks is None else [
                     SimpleNamespace(x=1 - p["x"], y=p["y"]) for p in landmarks
                 ]
-                mode, position = gestures.get_gesture(hand, WIDTH, HEIGHT, self.gesture)
+                mode, position = gestures.get_gesture(hand, WIDTH, HEIGHT, self.gesture, event["dt"])
             else:
-                gestures.get_gesture(None, WIDTH, HEIGHT, self.gesture)
+                gestures.reset_gesture(self.gesture)
             self.cursor = mode, position
             if not event["paused"]:
                 self.game.update(mode, position, event["dt"])
