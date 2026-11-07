@@ -9,7 +9,7 @@ const statusText = document.querySelector("#status-text");
 const toast = document.querySelector("#toast");
 const cameraVideo = document.querySelector("#camera-video");
 const cameraPreview = document.querySelector("#camera-preview");
-const canvasWrap = document.querySelector("#canvas-wrap");
+const gamePanel = document.querySelector(".game-panel");
 const inputButtons = {
   mouse: document.querySelector("#mouse-mode"),
   hand: document.querySelector("#camera-mode"),
@@ -622,7 +622,7 @@ document.querySelector("#clear").addEventListener("click", () => {
 document.querySelector("#fullscreen").addEventListener("click", async () => {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
-    else await canvasWrap.requestFullscreen();
+    else await gamePanel.requestFullscreen();
   } catch (error) {
     showToast(`Could not enter fullscreen: ${error.message}`);
   }
