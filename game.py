@@ -18,7 +18,6 @@ MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
 PAD_MARGIN = 90          # px from the left edge
 MAX_CLOUDS = 6
 CLOUD_RADIUS = 45
-DRAWING_PAUSE_TIME = 0.3  # seconds allowed for a brief tracking dropout
 SCREEN_MARGIN = 30
 MIN_POINT_DISTANCE = 3
 MAX_TRAIL_POINTS = 60
@@ -133,7 +132,6 @@ class Game:
         self.state = "READY"
         self.timer = 0.0
         self.raw_path = []
-        self.drawing_pause = 0.0
         self.path = []
         self.trail = []
         self.plane = physics.make_plane(self.pad[0], self.pad[1])
@@ -162,7 +160,6 @@ class Game:
 
         elif self.state == "DRAWING":
             if mode == "DRAW" and point is not None:
-                self.drawing_pause = 0.0
                 if paths.distance(point, self.raw_path[-1]) >= MIN_POINT_DISTANCE:
                     self.raw_path.append(point)
                 # Launch on arrival so changing gestures cannot move the endpoint away.
@@ -170,14 +167,12 @@ class Game:
                         paths.distance(point, self.star) <= STAR_RADIUS):
                     if self.raw_path[-1] != point:
                         self.raw_path.append(point)
-                    self.finish_path()
+                    self.finish_path(gesture_input=gesture_input)
             elif mode == "HOVER" and point is not None:
+                self.finish_path(gesture_input=gesture_input)
+            elif not gesture_input:
                 self.finish_path()
-            else:
-                # Brief tracking dropouts should not release the route.
-                self.drawing_pause += dt
-                if self.drawing_pause >= DRAWING_PAUSE_TIME:
-                    self.finish_path()
+            # Lost or folded hands pause drawing until an intentional release.
 
         elif self.state == "FLYING":
             self.update_flight(dt)
@@ -190,10 +185,17 @@ class Game:
                 else:
                     self.retry()
 
-    def finish_path(self):
+    def finish_path(self, *, gesture_input=False):
         if len(self.raw_path) < MIN_PATH_POINTS:
-            self.retry()
+            if not gesture_input:
+                self.retry()
             return
+        # Use the last drawing point: raising a second finger can move the cursor.
+        # Connect before smoothing so the approach blends into the destination.
+        if (gesture_input and
+                paths.distance(self.raw_path[-1], self.star) <= HAND_FINISH_RADIUS and
+                self.raw_path[-1] != self.star):
+            self.raw_path.append(self.star)
         smooth = paths.chaikin(self.raw_path)
         self.path = paths.resample(smooth)
         self.tries += 1

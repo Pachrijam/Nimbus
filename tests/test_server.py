@@ -150,6 +150,30 @@ class EngineTests(unittest.TestCase):
                 self.assertEqual(flight.raw_path[-1], endpoint)
                 self.assertEqual(flight.path[-1], endpoint)
 
+    def test_hand_release_uses_drawn_endpoint_despite_cursor_movement(self):
+        for offset in ((-45, 0), (45, 0), (0, -45), (0, 45)):
+            with self.subTest(offset=offset):
+                flight = game.Game(960, 600, headless=True)
+                for x in range(90, 701, 10):
+                    flight.update("DRAW", (x, 300), 0.02, gesture_input=True)
+                endpoint = (flight.star[0] + offset[0], flight.star[1] + offset[1])
+                flight.update("DRAW", endpoint, 0.02, gesture_input=True)
+                saved_path = list(flight.raw_path)
+                # Finger movement during release must not pull the endpoint away.
+                flight.update("HOVER", (600, 200), 0.02, gesture_input=True)
+                self.assertEqual(flight.state, "FLYING")
+                self.assertEqual(flight.raw_path[:-1], saved_path)
+                self.assertEqual(flight.path[-1], flight.star)
+
+    def test_hand_arrival_at_star_edge_finishes_at_center(self):
+        flight = game.Game(960, 600, headless=True)
+        for x in range(90, 801, 10):
+            flight.update("DRAW", (x, 300), 0.02, gesture_input=True)
+        flight.update("DRAW", (840 - game.STAR_RADIUS, 300), 0.02, gesture_input=True)
+        self.assertEqual(flight.state, "FLYING")
+        self.assertEqual(flight.path[-1], flight.star)
+        self.assertEqual(flight.tries, 1)
+
     def test_short_mouse_route_still_resets_without_launching(self):
         flight = game.Game(960, 600, headless=True)
         flight.update("DRAW", flight.pad, 0.02)
