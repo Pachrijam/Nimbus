@@ -67,6 +67,7 @@ function frame(now) {
     if (state.selectedInput === "HAND") {
       try {
         event.landmarks = camera.handLandmarks();
+        event.cameraAspect = camera.aspectRatio;
       } catch (error) {
         controls.setInputMode("MOUSE");
         ui.showToast(`Hand tracking stopped: ${error.message}`);

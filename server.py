@@ -46,9 +46,12 @@ class Session:
                 landmarks = event["landmarks"]
                 # The video is mirrored in the UI; mirror landmarks before Python recognition.
                 hand = None if landmarks is None else [
-                    SimpleNamespace(x=1 - p["x"], y=p["y"]) for p in landmarks
+                    SimpleNamespace(x=1 - p["x"], y=p["y"], z=p["z"]) for p in landmarks
                 ]
-                mode, position = gestures.get_gesture(hand, WIDTH, HEIGHT, self.gesture, event["dt"])
+                mode, position = gestures.get_gesture(
+                    hand, WIDTH, HEIGHT, self.gesture, event["dt"],
+                    camera_aspect=event["cameraAspect"],
+                )
             else:
                 gestures.reset_gesture(self.gesture)
             self.cursor = mode, position
@@ -105,8 +108,11 @@ def validate_events(events):
             if landmarks is not None:
                 if not isinstance(landmarks, list) or len(landmarks) != 21 or not all(isinstance(p, dict) for p in landmarks):
                     raise ValueError("Expected 21 landmarks")
-                landmarks = [{"x": number(p.get("x"), -2, 3), "y": number(p.get("y"), -2, 3)} for p in landmarks]
+                landmarks = [{"x": number(p.get("x"), -2, 3),
+                              "y": number(p.get("y"), -2, 3),
+                              "z": number(p.get("z", 0), -5, 5)} for p in landmarks]
             item["landmarks"] = landmarks
+            item["cameraAspect"] = number(event.get("cameraAspect", WIDTH / HEIGHT), 0.1, 10)
         clean.append(item)
     return clean
 

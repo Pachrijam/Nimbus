@@ -5,7 +5,9 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import game
+import gestures
 from server import GameServer, Session, validate_events
+from test_gestures import depth_hand
 
 
 def event(mode="IDLE", point=None, dt=0.02, **kwargs):
@@ -45,7 +47,7 @@ class EngineTests(unittest.TestCase):
 
     def test_hand_trackers_are_isolated_and_mirrored(self):
         first, second = Session(), Session()
-        hand = [{"x": 0.9, "y": 0.7} for _ in range(21)]
+        hand = [{"x": 0.74, "y": 0.7} for _ in range(21)]
         hand[0]["y"] = 0.9
         hand[5]["y"] = 0.8
         hand[8]["y"] = 0.5
@@ -61,13 +63,16 @@ class EngineTests(unittest.TestCase):
 
     def test_tracking_gap_does_not_finish_route_before_destination(self):
         session = Session()
-        hand = [{"x": 0.9, "y": 0.5} for _ in range(21)]
+        hand = [{"x": 1 - (gestures.ZONE_LEFT + 90 / 960 *
+                                  (gestures.ZONE_RIGHT - gestures.ZONE_LEFT)),
+                 "y": 0.45} for _ in range(21)]
         hand[0]["y"] = 0.9
         hand[5]["y"] = 0.8
         hand[6]["y"] = 0.7
         session.update(validate_events([event(landmarks=hand)] * 3))
         for x in range(110, 400, 10):
-            hand[8]["x"] = 1 - x / 960
+            hand[8]["x"] = 1 - (gestures.ZONE_LEFT + x / 960 *
+                                    (gestures.ZONE_RIGHT - gestures.ZONE_LEFT))
             # Move the whole hand horizontally, keeping the drawing gesture.
             for landmark in hand:
                 landmark["x"] = hand[8]["x"]
@@ -171,6 +176,43 @@ class EngineTests(unittest.TestCase):
         for events in ([], [event(dt=float("nan"))], [event(dt=-1)], [event(landmarks=[])], [{"action": "unknown"}], [event(point={"x": 1e9, "y": 0})]):
             with self.subTest(events=events), self.assertRaises(ValueError):
                 validate_events(events)
+
+    def test_depth_input_preserves_route_until_deliberate_release(self):
+        session = Session()
+
+        def send_pose(x, *, tilt=0, scale=1, middle=False, frames=3):
+            pose = depth_hand(tilt=tilt, scale=scale, middle=middle, aspect=4 / 3)
+            target_x = gestures.ZONE_LEFT + x / 960 * (gestures.ZONE_RIGHT - gestures.ZONE_LEFT)
+            offset = target_x - pose[8].x
+            offset_y = (gestures.ZONE_TOP + gestures.ZONE_BOTTOM) / 2 - pose[8].y
+            landmarks = [{"x": 1 - (p.x + offset), "y": p.y + offset_y, "z": p.z} for p in pose]
+            session.update(validate_events([event(landmarks=landmarks, cameraAspect=4 / 3)] * frames))
+
+        send_pose(90)
+        for x in range(100, 400, 10):
+            send_pose(x)
+        self.assertEqual(session.game.state, "DRAWING")
+        saved_path = list(session.game.raw_path)
+        for tilt, scale in ((1.5, 0.2), (1.55, 1.2), (1.0, 0.5), (0, 1)):
+            send_pose(450, tilt=tilt, scale=scale, frames=15)
+            self.assertEqual(session.cursor[0], "DRAW")
+            self.assertEqual(session.game.state, "DRAWING")
+            self.assertEqual(session.game.raw_path[:len(saved_path)], saved_path)
+        send_pose(450, middle=True, frames=15)
+        self.assertEqual(session.game.state, "FLYING")
+        self.assertEqual(session.game.tries, 1)
+
+    def test_depth_and_camera_aspect_are_validated(self):
+        hand = [{"x": 0.5, "y": 0.5, "z": -0.2} for _ in range(21)]
+        clean = validate_events([event(landmarks=hand, cameraAspect=4 / 3)])[0]
+        self.assertEqual(clean["landmarks"][0]["z"], -0.2)
+        for bad in (float("nan"), float("inf"), "0", True, 20):
+            with self.subTest(bad=bad):
+                hand[0]["z"] = bad
+                with self.assertRaises(ValueError):
+                    validate_events([event(landmarks=hand)])
+                with self.assertRaises(ValueError):
+                    validate_events([event(landmarks=None, cameraAspect=bad)])
 
 
 class HTTPTests(unittest.TestCase):

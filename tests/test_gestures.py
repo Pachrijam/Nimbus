@@ -19,6 +19,16 @@ def hand(*, middle=False, folded=False, angle=0, offset=0):
     ) for x, y in points]
 
 
+def depth_hand(*, tilt=0, scale=1, middle=False, folded=False, aspect=1):
+    """Rotate a hand toward the lens, then change its apparent size."""
+    c, s = math.cos(tilt), math.sin(tilt)
+    return [SimpleNamespace(
+        x=0.5 + scale * (p.x - 0.5) / aspect,
+        y=0.7 + scale * (p.y - 0.9) * c,
+        z=scale * (p.y - 0.9) * s / aspect,
+    ) for p in hand(middle=middle, folded=folded)]
+
+
 class GestureTests(unittest.TestCase):
     def setUp(self):
         self.tracker = {}
@@ -62,7 +72,8 @@ class GestureTests(unittest.TestCase):
 
     def test_cursor_follows_movement_without_long_smoothing_delay(self):
         _, start = self.sample(hand(), 3)
-        _, moved = self.sample(hand(offset=0.1))
+        # A 0.06 camera displacement spans 60 pixels through the active zone.
+        _, moved = self.sample(hand(offset=0.06))
         self.assertGreaterEqual(moved[0] - start[0], 40)
         self.assertLessEqual(moved[0] - start[0], 60)
 
@@ -70,6 +81,57 @@ class GestureTests(unittest.TestCase):
         self.sample(hand(), 3)
         gestures.reset_gesture(self.tracker)
         self.assertEqual(self.sample(None), ("IDLE", None))
+
+    def test_depth_and_distance_changes_keep_one_continuous_draw(self):
+        self.sample(depth_hand(), 3)
+        for degrees in (30, 60, 85, 89, 60, 0):
+            for scale in (0.2, 0.5, 1, 1.3, 0.5):
+                with self.subTest(degrees=degrees, scale=scale):
+                    pose = depth_hand(tilt=math.radians(degrees), scale=scale)
+                    for _ in range(10):
+                        self.assertEqual(self.sample(pose)[0], "DRAW")
+                        self.assertEqual(self.tracker["candidate"], "DRAW")
+
+    def test_depth_still_allows_intentional_release_and_fold(self):
+        for degrees in (0, 60, 89):
+            with self.subTest(degrees=degrees):
+                gestures.reset_gesture(self.tracker)
+                tilt = math.radians(degrees)
+                self.sample(depth_hand(tilt=tilt), 3)
+                self.assertEqual(self.sample(depth_hand(tilt=tilt, middle=True), 6)[0], "HOVER")
+                self.assertEqual(self.sample(depth_hand(tilt=tilt, folded=True), 6)[0], "IDLE")
+
+    def test_uncertain_index_estimate_does_not_cut_stroke(self):
+        self.sample(hand(), 3)
+        uncertain = hand()
+        uncertain[8].y = uncertain[6].y - 0.01
+        for _ in range(20):
+            self.assertEqual(self.sample(uncertain)[0], "DRAW")
+        self.assertEqual(self.sample(hand(folded=True), 6)[0], "IDLE")
+
+    def test_missing_frames_do_not_complete_pending_release(self):
+        drawing = self.sample(hand(), 3)
+        self.assertEqual(self.sample(hand(middle=True, offset=0.1), 3), drawing)
+        self.assertEqual(self.sample(None, 4), drawing)
+        self.assertEqual(self.sample(hand(middle=True), 2)[0], "DRAW")
+        self.assertEqual(self.sample(hand())[0], "DRAW")
+
+    def test_source_aspect_is_independent_of_canvas_size(self):
+        for aspect in (4 / 3, 16 / 9, 3 / 4):
+            gestures.reset_gesture(self.tracker)
+            pose = depth_hand(tilt=math.radians(89), aspect=aspect)
+            for _ in range(3):
+                mode, _ = gestures.get_gesture(pose, 960, 600, self.tracker,
+                                               camera_aspect=aspect)
+            self.assertEqual(mode, "DRAW")
+
+    def test_desktop_default_tracker_accepts_dt_and_resets(self):
+        gestures.reset_gesture()
+        for _ in range(3):
+            mode, _ = gestures.get_gesture(depth_hand(), 640, 480, dt=1 / 30)
+        self.assertEqual(mode, "DRAW")
+        gestures.reset_gesture()
+        self.assertEqual(gestures.get_gesture(None, 640, 480), ("IDLE", None))
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
     if (cameraVideo.currentTime === lastVideoTime) return lastHandLandmarks;
     const result = handLandmarker.detectForVideo(cameraVideo, performance.now());
     lastVideoTime = cameraVideo.currentTime;
-    lastHandLandmarks = result.landmarks?.[0]?.map(({ x, y }) => ({ x, y })) ?? null;
+    lastHandLandmarks = result.landmarks?.[0]?.map(({ x, y, z }) => ({ x, y, z })) ?? null;
     return lastHandLandmarks;
   }
 
@@ -108,6 +108,7 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
     stopCamera,
     enableHandTracking,
     handLandmarks,
+    get aspectRatio() { return cameraVideo.videoWidth / cameraVideo.videoHeight || 4 / 3; },
     get active() { return Boolean(cameraStream); },
   };
 }

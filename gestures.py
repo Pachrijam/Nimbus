@@ -9,8 +9,8 @@ Modes:
  
 Fixes for smooth air-drawing:
   1. Active zone       - the middle of the camera maps to the whole screen (no arm stretching)
-  2. Tilt-proof checks - "finger up" = tip farther from the wrist than the knuckle (any hand angle)
-  3. Sticky DRAW       - entering DRAW is fast, leaving it needs more frames (no broken routes)
+  2. Depth-aware checks - compare 3D distances relative to hand size
+  3. Sticky DRAW       - entering DRAW is fast, leaving it needs a stable gesture
   4. Release hold      - while switching away from DRAW, the point freezes (no jump at the route's end)
   5. Lost-hand grace   - a few missing frames don't end the route
   6. Adaptive smoothing - heavy smoothing when slow (no jitter), light when fast (no lag)
@@ -34,12 +34,16 @@ ZONE_BOTTOM = 0.75
 INDEX_UP_RATIO = 1.10     # index counts as up above this
 MIDDLE_UP_RATIO = 1.20    # middle must be clearly up -> fewer accidental launches
  
-# 3. Debouncing (frames)
-ENTER_FRAMES = 2          # frames to switch into a new mode
-EXIT_DRAW_FRAMES = 4      # frames to leave DRAW (sticky, so routes don't break)
+# Hysteresis keeps uncertain finger estimates from toggling the gesture.
+INDEX_DOWN_RATIO = 0.95
+MIDDLE_DOWN_RATIO = 1.10
+
+# Debounce in seconds: camera/display frame rates must not affect release timing.
+ENTER_TIME = 0.05
+EXIT_DRAW_TIME = 0.18
  
-# 5. Lost-hand grace (frames)
-LOST_GRACE_FRAMES = 6
+# 5. Lost-hand grace (seconds)
+LOST_GRACE_TIME = 0.25
  
 # 6. Adaptive smoothing
 MIN_ALPHA = 0.25          # used when the finger is still (smooth)
@@ -47,22 +51,30 @@ MAX_ALPHA = 0.85          # used when the finger moves fast (responsive)
 FAST_SPEED = 40.0         # px per frame that counts as "fast"
  
 # Values that must survive between frames
-state = {
-    "mode": "IDLE",          # official, debounced mode
-    "candidate": "IDLE",     # raw mode currently being counted
-    "count": 0,              # frames in a row the candidate has been seen
-    "smooth": None,          # smoothed (x, y) floats, or None
-    "draw_point": None,      # last point while firmly in DRAW (used by the release hold)
-    "lost": 0,               # frames in a row without a hand
-}
+_default_state = {}
+
+
+def reset_gesture(tracker=None):
+    """Clear one browser session, or the desktop's default tracker."""
+    tracker = _default_state if tracker is None else tracker
+    tracker.clear()
+    tracker.update({
+        "mode": "IDLE",          # official, debounced mode
+        "candidate": "IDLE",     # raw mode currently being counted
+        "candidate_time": 0.0,
+        "smooth": None,          # smoothed (x, y) floats, or None
+        "draw_point": None,      # last confirmed DRAW point for the release hold
+        "lost": 0.0,
+        "index_up": False,
+        "middle_up": False,
+    })
  
  
 def reset():
-    state["mode"] = "IDLE"
-    state["candidate"] = "IDLE"
-    state["count"] = 0
-    state["smooth"] = None
-    state["draw_point"] = None
+    reset_gesture()
+
+
+reset_gesture()
  
  
 def to_screen(v, lo, hi, size):
@@ -73,32 +85,41 @@ def to_screen(v, lo, hi, size):
  
  
 def pixel_dist(a, b, w, h):
-    """Distance between two landmarks in pixels (fair in x and y)."""
-    return math.hypot((a.x - b.x) * w, (a.y - b.y) * h)
+    """3D distance: MediaPipe depth uses the same scale as normalized x."""
+    return math.hypot((a.x - b.x) * w, (a.y - b.y) * h,
+                      (getattr(a, "z", 0.0) - getattr(b, "z", 0.0)) * w)
  
  
 def finger_ratio(landmarks, tip, pip, w, h):
     """How extended a finger is: >1 means the tip is farther from the wrist than the knuckle."""
     wrist = landmarks[WRIST]
     d_pip = pixel_dist(landmarks[pip], wrist, w, h)
-    if d_pip < 1:
+    if d_pip < 1e-9:
         return 0.0
     return pixel_dist(landmarks[tip], wrist, w, h) / d_pip
  
  
-def get_gesture(landmarks, w, h):
+def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None):
     """
-    landmarks: list of 21 hand points (x and y from 0 to 1), or None if no hand
-    w, h: frame width and height in pixels
+    landmarks: 21 normalized x/y/z hand points, or None if no hand
+    w, h: output dimensions; camera_aspect is source width / height if different
     returns: (mode, (x, y)) with (x, y) in integer pixels, or (mode, None)
     """
+    state = _default_state if tracker is None else tracker
+    if not state:
+        reset_gesture(state)
+    dt = max(0.0, min(dt, 0.1))
     # ---- 5. No hand: short grace period, then reset ----
     if landmarks is None:
-        state["lost"] += 1
-        if state["lost"] <= LOST_GRACE_FRAMES and state["smooth"] is not None:
-            sx, sy = state["smooth"]
+        state["lost"] += dt
+        # A missing frame cannot count toward a deliberate release.
+        state["candidate"] = state["mode"]
+        state["candidate_time"] = 0.0
+        if state["lost"] <= LOST_GRACE_TIME and state["smooth"] is not None:
+            held = state["draw_point"] if state["mode"] == "DRAW" else None
+            sx, sy = held or state["smooth"]
             return state["mode"], (int(sx), int(sy))
-        reset()
+        reset_gesture(state)
         return "IDLE", None
     state["lost"] = 0
  
@@ -107,9 +128,13 @@ def get_gesture(landmarks, w, h):
     x = to_screen(tip.x, ZONE_LEFT, ZONE_RIGHT, w)
     y = to_screen(tip.y, ZONE_TOP, ZONE_BOTTOM, h)
  
-    # ---- 2. Tilt-proof finger checks -> raw mode ----
-    index_up = finger_ratio(landmarks, INDEX_TIP, INDEX_PIP, w, h) > INDEX_UP_RATIO
-    middle_up = finger_ratio(landmarks, MIDDLE_TIP, MIDDLE_PIP, w, h) > MIDDLE_UP_RATIO
+    # Use source image proportions, not the stretched game canvas.
+    aspect = w / h if camera_aspect is None else camera_aspect
+    index_threshold = INDEX_DOWN_RATIO if state["index_up"] else INDEX_UP_RATIO
+    middle_threshold = MIDDLE_DOWN_RATIO if state["middle_up"] else MIDDLE_UP_RATIO
+    index_up = finger_ratio(landmarks, INDEX_TIP, INDEX_PIP, aspect, 1) > index_threshold
+    middle_up = finger_ratio(landmarks, MIDDLE_TIP, MIDDLE_PIP, aspect, 1) > middle_threshold
+    state["index_up"], state["middle_up"] = index_up, middle_up
  
     if index_up and not middle_up:
         raw_mode = "DRAW"
@@ -120,17 +145,17 @@ def get_gesture(landmarks, w, h):
  
     # ---- 3. Debouncing (sticky DRAW) ----
     if raw_mode == state["candidate"]:
-        state["count"] += 1
+        state["candidate_time"] += dt
     else:
         state["candidate"] = raw_mode
-        state["count"] = 1
+        state["candidate_time"] = dt
  
     if state["mode"] == "DRAW":
-        needed = EXIT_DRAW_FRAMES
+        needed = EXIT_DRAW_TIME
     else:
-        needed = ENTER_FRAMES
+        needed = ENTER_TIME
  
-    if state["candidate"] != state["mode"] and state["count"] >= needed:
+    if state["candidate"] != state["mode"] and state["candidate_time"] + 1e-9 >= needed:
         state["mode"] = state["candidate"]
  
     # ---- 6. Adaptive smoothing ----
