@@ -110,7 +110,8 @@ h1 span { color: #8ca2b6; }
 .toast { position: absolute; left: 50%; bottom: 17px; transform: translateX(-50%); max-width: calc(100% - 30px); padding: 9px 13px; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; background: rgba(7, 19, 32, .88); color: white; font-size: 12px; text-align: center; }
 
 .panel-footer { min-height: 54px; display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--line); }
-.game-panel:fullscreen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: 100%; border: 0; border-radius: 0; }
+.game-panel:fullscreen { display: flex; flex-direction: column; width: 100%; height: 100%; border: 0; border-radius: 0; overflow-y: auto; }
+.game-panel:fullscreen .canvas-wrap { flex: 1; min-height: 160px; }
 .game-panel:fullscreen .canvas-wrap { display: grid; place-items: center; container-type: size; background: #081321; }
 .game-panel:fullscreen #game-canvas { width: min(100cqw, 160cqh); height: auto; }
 .game-panel:fullscreen .toolbar { flex-wrap: wrap; }
@@ -127,6 +128,23 @@ kbd:first-child { margin-left: 0; }
 .page-footer { padding: 25px 0 18px; color: #647789; font: 10px "DM Mono", monospace; text-align: center; }
 .page-footer span { padding: 0 5px; color: #95a7b5; }
 
+.comparison { padding: 22px; border-top: 1px solid var(--line); background: #102332; }
+.comparison-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.comparison h2 { margin: 0; font: 600 22px "Space Grotesk", sans-serif; }
+.match-badge { padding: 8px 12px; border: 1px solid rgba(120,226,189,.3); border-radius: 20px; color: var(--mint); font-size: 12px; }
+.comparison-message { color: #d5e4ef; font-size: 14px; line-height: 1.5; }
+.comparison-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+.comparison-metrics div { padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.comparison-metrics dt { color: var(--muted); font-size: 11px; }
+.comparison-metrics dd { margin: 8px 0 0; font: 500 24px "DM Mono", monospace; }
+.comparison-note { max-width: 780px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.route-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #bccddd; font-size: 12px; }
+.player-line, .ai-line { display: inline-block; width: 22px; border-top: 3px solid #f08c68; }
+.ai-line { margin-left: 14px; border-top: 3px dashed #bb9ce9; }
+.comparison-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.comparison-actions .tool-button { min-height: 44px; border-color: var(--line); }
+button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+
 @media (max-width: 700px) {
   .app-shell { width: min(100% - 24px, 560px); }
   .topbar { height: 60px; }
@@ -141,6 +159,9 @@ kbd:first-child { margin-left: 0; }
   .quick-controls { flex-wrap: wrap; }
   .how-to { grid-template-columns: 1fr; gap: 8px; }
   .step-card { min-height: 0; padding: 12px; }
+  .comparison { padding: 16px; }
+  .comparison-metrics { grid-template-columns: repeat(2, 1fr); }
+  .comparison-metrics dd { font-size: 21px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,7 @@
 __pycache__/
 venv/
+.env
+.env.*
 *.png
 !web/images/
 !web/images/favicon.png

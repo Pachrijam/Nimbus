@@ -321,6 +321,12 @@ export function createRenderer({ canvas, cameraVideo }) {
 
     if (game.state === "DRAWING") drawRoutePreview(game);
     else if (game.state === "FLYING") drawPath(game.path, "rgba(255,255,255,.86)", 3, true);
+    else if (game.state === "LANDED") {
+      drawPath(game.trajectory, "#b43b13", 4);
+      if (game.comparison?.status === "ready") {
+        drawPath(game.comparison.aiTrajectory, "#6334a7", 4, true);
+      }
+    }
 
     if (game.trail.length > 1) {
       for (let i = 1; i < game.trail.length; i += 1) {
@@ -358,8 +364,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.textAlign = "center";
       ctx.fillText("Start at the drone · release to launch", WIDTH / 2, HEIGHT - 34);
       ctx.textAlign = "left";
-    } else if (game.state === "LANDED") drawMessage("DELIVERED!");
-    else if (game.state === "CRASHED") drawMessage("ROUTE FAILED");
+    } else if (game.state === "CRASHED") drawMessage("ROUTE FAILED");
 
     if (debug) {
       ctx.fillStyle = "#0a1926";

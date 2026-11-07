@@ -72,6 +72,8 @@ class Session:
             "preview": list(map(point, preview)),
             "tight": paths.find_tight_turns(preview, physics.SPEED / physics.MAX_TURN),
             "starRadius": game.STAR_RADIUS,
+            "comparison": flight.comparison(),
+            "trajectory": list(map(point, flight.trajectory)) if flight.state == "LANDED" else [],
             "cursor": {"mode": self.cursor[0], "point": point(self.cursor[1])},
         }
 
