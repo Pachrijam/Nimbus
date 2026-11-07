@@ -1,4 +1,4 @@
-# OVERVIEW: AirCanvas Flight Path
+# OVERVIEW: Nimbus Flight Path
 
 **HackRPI 2026 · Theme: "In The Clouds" · Team: Avyay, Paul, Person 3**
 
