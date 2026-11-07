@@ -59,6 +59,7 @@ def get_gesture(landmarks, w, h):
     else:
         state["candidate"] = raw_mode
         state["count"] = 1
+
     if state["count"] >= DEBOUNCE_FRAMES:
         state["mode"] = raw_mode
 
