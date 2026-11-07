@@ -71,7 +71,7 @@ export function createControls({ canvas, gamePanel, inputButtons, state, camera,
     setStatus(state.freeDraw
       ? "Free draw: sketch anywhere. C clears; Back to game, Esc, or P exits."
       : state.selectedInput === "HAND"
-        ? "Draw to the gold destination with one finger, then hold up two fingers to launch."
+        ? "Draw a route from the drone with one finger, then hold up two fingers to launch."
         : "Drag from the drone to draw a route. Release to launch.");
   }
 

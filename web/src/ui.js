@@ -21,15 +21,14 @@ export function createUI({ canvas, statusText, toast }) {
     if (changed && !freeDraw) {
       const messages = {
         READY: selectedInput === "HAND"
-          ? "Draw from the drone to the gold destination with one finger, then hold up two fingers to launch."
-          : "Draw from the drone to the destination. Release to launch.",
+          ? "Draw a route from the drone with one finger, then hold up two fingers to launch."
+          : "Draw a route from the drone. Release to launch.",
         DRAWING: selectedInput === "HAND"
-          ? "Keep drawing to the gold destination, then hold up two fingers to launch. Tracking gaps pause your route."
-          : "Keep drawing to the destination. Release to launch.",
+          ? "Hold up two fingers when you're ready to launch. Tracking gaps pause your route."
+          : "Release when you're ready to launch.",
         FLYING: "Drone launched. Avoid the storms!",
         LANDED: "Delivery complete! Next level loading...",
         CRASHED: "Route failed. Preparing another attempt...",
-        INVALID: "Your route must end at the gold destination. Try again.",
       };
       setStatus(messages[snapshot.state]);
     }

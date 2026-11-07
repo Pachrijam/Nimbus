@@ -144,18 +144,18 @@ class Game:
             elif not gesture_input:
                 self.finish_path()
             elif (mode == "HOVER" and point is not None
-                  and len(self.raw_path) >= MIN_PATH_POINTS
-                  and paths.distance(self.raw_path[-1], self.star) <= HAND_FINISH_RADIUS):
-                # A lost/uncertain hand pauses the route. Even two fingers should
-                # preserve an unfinished route so the user can resume drawing.
-                if self.raw_path[-1] != self.star:
+                  and len(self.raw_path) >= MIN_PATH_POINTS):
+                # Two fingers launch anywhere; tracking loss still pauses drawing.
+                # Keep the existing snap assistance for endpoints near the star.
+                if (self.raw_path[-1] != self.star
+                        and paths.distance(self.raw_path[-1], self.star) <= HAND_FINISH_RADIUS):
                     self.raw_path.append(self.star)
                 self.finish_path()
 
         elif self.state == "FLYING":
             self.update_flight(dt)
 
-        elif self.state in ("LANDED", "CRASHED", "INVALID"):
+        elif self.state in ("LANDED", "CRASHED"):
             self.timer += dt
             if self.timer >= MESSAGE_TIME:
                 if self.state == "LANDED":
@@ -166,10 +166,6 @@ class Game:
     def finish_path(self):
         if len(self.raw_path) < MIN_PATH_POINTS:
             self.retry()
-            return
-        if paths.distance(self.raw_path[-1], self.star) > STAR_RADIUS:
-            self.state = "INVALID"
-            self.timer = 0.0
             return
         smooth = paths.chaikin(self.raw_path)
         self.path = paths.resample(smooth)
@@ -247,8 +243,6 @@ class Game:
             visuals.draw_message(img, "DELIVERED!")
         elif self.state == "CRASHED":
             visuals.draw_message(img, "ROUTE FAILED")
-        elif self.state == "INVALID":
-            visuals.draw_message(img, "ROUTE MUST REACH DESTINATION", 0.8)
 
         visuals.draw_cursor(img, self.cursor_mode, self.cursor_point)
         return img

@@ -32,11 +32,13 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(session.game.state, "LANDED")
         self.assertEqual(session.game.score, 1200)
 
-    def test_invalid_endpoint_and_retry(self):
+    def test_route_ending_short_of_destination_launches_and_can_retry(self):
         session = Session()
         session.update(validate_events([event("DRAW", {"x": x, "y": 300}) for x in range(90, 250, 10)] + [event()]))
-        self.assertEqual(session.game.state, "INVALID")
-        self.assertEqual(session.game.tries, 0)
+        self.assertEqual(session.game.state, "FLYING")
+        self.assertEqual(session.game.path[-1], (240, 300))
+        self.assertEqual(session.game.tries, 1)
+        self.assertEqual(session.game.score, 0)
         session.update(validate_events([{"action": "retry"}]))
         self.assertEqual(session.game.state, "READY")
         self.assertEqual(session.game.clouds, session.game.cloud_layout)
@@ -80,28 +82,26 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(session.game.state, "DRAWING")
         # Switching to mouse still releases immediately rather than using the grace period.
         session.update(validate_events([event()]))
-        self.assertEqual(session.game.state, "INVALID")
+        self.assertEqual(session.game.state, "FLYING")
 
-    def test_gesture_route_pauses_and_requires_two_fingers_at_destination(self):
+    def test_gesture_route_pauses_and_two_fingers_launch_before_destination(self):
         flight = game.Game(960, 600, headless=True)
         flight.star = (840, 300)
         for x in range(90, 400, 10):
             flight.update("DRAW", (x, 300), 0.02, gesture_input=True)
         saved_path = list(flight.raw_path)
         for mode, point in (("IDLE", None), ("IDLE", (400, 300)),
-                            ("DRAW", None), ("HOVER", (400, 300))):
+                            ("DRAW", None), ("HOVER", None)):
             with self.subTest(mode=mode, point=point):
                 for _ in range(100):
                     flight.update(mode, point, 0.05, gesture_input=True)
                 self.assertEqual(flight.state, "DRAWING")
                 self.assertEqual(flight.raw_path, saved_path)
-        for x in range(400, 841, 10):
-            flight.update("DRAW", (x, 300), 0.02, gesture_input=True)
-        flight.update("IDLE", None, 0.05, gesture_input=True)
-        self.assertEqual(flight.state, "DRAWING")
-        flight.update("HOVER", (840, 300), 0.05, gesture_input=True)
+        flight.update("HOVER", (400, 300), 0.05, gesture_input=True)
         self.assertEqual(flight.state, "FLYING")
         self.assertEqual(flight.tries, 1)
+        self.assertEqual(flight.path[-1], saved_path[-1])
+        self.assertEqual(flight.score, 0)
 
     def test_short_gesture_route_can_resume_without_being_reset(self):
         flight = game.Game(960, 600, headless=True)
@@ -131,9 +131,8 @@ class EngineTests(unittest.TestCase):
             flight.update("IDLE", None, 0.02, gesture_input=True)
         self.assertEqual(flight.state, "LANDED")
 
-    def test_hand_finish_tolerance_has_a_limit_and_only_applies_to_gestures(self):
-        for gesture_input, distance, expected in ((True, 61, "DRAWING"),
-                                                   (False, 60, "INVALID")):
+    def test_destination_snap_has_a_limit_and_only_applies_to_gestures(self):
+        for gesture_input, distance in ((True, 61), (False, 60)):
             with self.subTest(gesture_input=gesture_input):
                 flight = game.Game(960, 600, headless=True)
                 flight.star = (840, 300)
@@ -142,8 +141,31 @@ class EngineTests(unittest.TestCase):
                 endpoint = (840 - distance, 300)
                 flight.update("DRAW", endpoint, 0.02, gesture_input=gesture_input)
                 flight.update("HOVER", endpoint, 0.05, gesture_input=gesture_input)
-                self.assertEqual(flight.state, expected)
+                self.assertEqual(flight.state, "FLYING")
                 self.assertEqual(flight.raw_path[-1], endpoint)
+                self.assertEqual(flight.path[-1], endpoint)
+
+    def test_short_mouse_route_still_resets_without_launching(self):
+        flight = game.Game(960, 600, headless=True)
+        flight.update("DRAW", flight.pad, 0.02)
+        flight.update("IDLE", None, 0.02)
+        self.assertEqual(flight.state, "READY")
+        self.assertEqual(flight.tries, 0)
+
+    def test_route_ending_short_can_deliver_by_flying_on_to_destination(self):
+        flight = game.Game(960, 600, headless=True)
+        flight.star = (840, 300)
+        flight.cloud_layout = []
+        flight.retry()
+        for x in range(90, 250, 10):
+            flight.update("DRAW", (x, 300), 0.02)
+        flight.update("IDLE", None, 0.02)
+        self.assertEqual(flight.state, "FLYING")
+        self.assertEqual(flight.score, 0)
+        for _ in range(240):
+            flight.update("IDLE", None, 0.02)
+        self.assertEqual(flight.state, "LANDED")
+        self.assertEqual(flight.score, 1200)
 
     def test_bad_input_is_rejected(self):
         for events in ([], [event(dt=float("nan"))], [event(dt=-1)], [event(landmarks=[])], [{"action": "unknown"}], [event(point={"x": 1e9, "y": 0})]):

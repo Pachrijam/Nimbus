@@ -285,7 +285,6 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.textAlign = "left";
     } else if (game.state === "LANDED") drawMessage("DELIVERED!");
     else if (game.state === "CRASHED") drawMessage("ROUTE FAILED");
-    else if (game.state === "INVALID") drawMessage("REACH THE DESTINATION");
 
     if (debug) {
       ctx.fillStyle = "#0a1926";
