@@ -10,7 +10,7 @@ Build order (test each in physics_test.py):
   2. steer_toward  - turn toward a target point, with a turn-rate limit
   3. find_target   - pick the look-ahead point on the path
 """
-
+ 
 import math
  
 USE_PHYSICS = True    # False -> plane follows the path exactly (safety switch for the demo)
@@ -122,7 +122,6 @@ def find_target(plane, path):
 # ---------------- Person 3: fallback ----------------
  
 def step_exact(plane, path, dt):
-
     """Use a distance budget to follow segments exactly, then fly straight."""
     remaining = plane["speed"] * dt
     plane["target"] = None
@@ -141,6 +140,6 @@ def step_exact(plane, path, dt):
         plane["x"], plane["y"] = target
         remaining -= length
         plane["i"] += 1
-
+ 
     plane["x"] += remaining * math.cos(plane["heading"])
     plane["y"] += remaining * math.sin(plane["heading"])
