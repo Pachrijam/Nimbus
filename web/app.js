@@ -58,7 +58,7 @@ function applySnapshot(snapshot) {
   const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
   game = snapshot;
   if (selectedInput === "HAND") Object.assign(input, game.cursor);
-  document.querySelector(".mission-chip strong").textContent = String(game.level).padStart(2, "0");
+  canvas.setAttribute("aria-label", `Mission ${String(game.level).padStart(2, "0")}. Game field. In mouse mode, hold the pointer near the drone and drag to draw a route.`);
   if (changed && !freeDraw) {
     const messages = {
       READY: selectedInput === "HAND"
@@ -168,27 +168,28 @@ function drawCloud(cloud) {
   ctx.restore();
 }
 
-function drawStar(x, y) {
+function drawDestination(x, y) {
   ctx.save();
   ctx.translate(x, y);
+  const radius = game.starRadius;
   ctx.shadowColor = "rgba(255,191,76,.6)";
   ctx.shadowBlur = 22;
   ctx.fillStyle = "#ffc758";
   ctx.beginPath();
-  for (let i = 0; i < 10; i += 1) {
-    const radius = i % 2 === 0 ? game.starRadius : game.starRadius * 0.46;
-    const angle = -Math.PI / 2 + i * Math.PI / 5;
-    const px = Math.cos(angle) * radius;
-    const py = Math.sin(angle) * radius;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
+  ctx.moveTo(0, radius);
+  ctx.bezierCurveTo(-radius * 0.35, radius * 0.55, -radius * 0.8, 0, -radius * 0.8, -radius * 0.3);
+  ctx.arc(0, -radius * 0.3, radius * 0.8, Math.PI, 0);
+  ctx.bezierCurveTo(radius * 0.8, 0, radius * 0.35, radius * 0.55, 0, radius);
   ctx.closePath();
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.strokeStyle = "rgba(133,86,20,.55)";
   ctx.lineWidth = 1.5;
   ctx.stroke();
+  ctx.fillStyle = "#fff8e8";
+  ctx.beginPath();
+  ctx.arc(0, -radius * 0.3, radius * 0.3, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -236,19 +237,32 @@ function drawRoutePreview() {
 }
 
 function drawHud() {
-  roundedRect(ctx, 18, 17, 282, 58, 8);
+  ctx.save();
+  ctx.textAlign = "left";
+  roundedRect(ctx, 18, 17, 130, 76, 8);
+  ctx.fillStyle = "rgba(10,31,43,.9)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,199,88,.65)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = "#fff";
+  ctx.font = "500 12px 'DM Mono', monospace";
+  ctx.fillText("MISSION", 34, 39);
+  ctx.fillStyle = "#ffc758";
+  ctx.font = "700 36px 'Space Grotesk', sans-serif";
+  ctx.fillText(String(game.level).padStart(2, "0"), 32, 79, 100);
+
+  roundedRect(ctx, 158, 17, 260, 76, 8);
   ctx.fillStyle = "rgba(10,31,43,.75)";
   ctx.fill();
-  ctx.fillStyle = "#fff";
   ctx.font = "600 15px 'DM Sans', sans-serif";
-  ctx.fillText(`LEVEL ${String(game.level).padStart(2, "0")}`, 34, 41);
   ctx.fillStyle = "#ffe09a";
-  ctx.fillText(`SCORE ${game.score}`, 153, 41);
+  ctx.fillText(`SCORE ${game.score}`, 174, 44);
   ctx.fillStyle = "rgba(255,255,255,.72)";
   ctx.font = "12px 'DM Sans', sans-serif";
-  ctx.fillText(`ATTEMPTS ${game.tries}`, 34, 61);
+  ctx.fillText(`ATTEMPTS ${game.tries}`, 174, 73);
 
-  const start = { x: 220, y: 56 };
+  const start = { x: 342, y: 50 };
   const length = Math.hypot(game.wind.x, game.wind.y);
   const angle = length > 1 ? Math.atan2(game.wind.y, game.wind.x) : 0;
   const end = { x: start.x + Math.cos(angle) * (18 + length * 0.35), y: start.y + Math.sin(angle) * (18 + length * 0.35) };
@@ -266,7 +280,8 @@ function drawHud() {
   ctx.closePath();
   ctx.fill();
   ctx.font = "10px 'DM Mono', monospace";
-  ctx.fillText("WIND", 240, 60);
+  ctx.fillText("WIND", 330, 79);
+  ctx.restore();
 }
 
 function drawMessage(text) {
@@ -338,7 +353,7 @@ function render() {
   ctx.fillRect(game.pad.x - 33, game.pad.y + 14, 66, 9);
   ctx.fillStyle = "rgba(255,255,255,.85)";
   ctx.fillRect(game.pad.x - 40, game.pad.y + 24, 80, 3);
-  drawStar(game.star.x, game.star.y);
+  drawDestination(game.star.x, game.star.y);
   for (const cloud of game.clouds) drawCloud(cloud);
 
   if (game.state === "DRAWING") drawRoutePreview();
