@@ -19,6 +19,8 @@ const input = { mode: "IDLE", point: null, drawing: false };
 
 let handLandmarker = null;
 let cameraStream = null;
+let lastVideoTime = -1;
+let lastHandLandmarks = null;
 let cameraRequest = 0;
 let handTrackingLoad = null;
 let handTrackingStarting = false;
@@ -419,6 +421,8 @@ function setInputMode(mode) {
 }
 
 function stopCamera() {
+  lastVideoTime = -1;
+  lastHandLandmarks = null;
   cameraRequest += 1;
   handTrackingStarting = false;
   if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop());
@@ -501,8 +505,12 @@ async function enableHandTracking() {
 
 function handLandmarks() {
   if (!cameraStream || !handLandmarker || cameraVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
+  // Display refresh can be faster than the camera; infer only on new video frames.
+  if (cameraVideo.currentTime === lastVideoTime) return lastHandLandmarks;
   const result = handLandmarker.detectForVideo(cameraVideo, performance.now());
-  return result.landmarks?.[0]?.map(({ x, y }) => ({ x, y })) ?? null;
+  lastVideoTime = cameraVideo.currentTime;
+  lastHandLandmarks = result.landmarks?.[0]?.map(({ x, y }) => ({ x, y })) ?? null;
+  return lastHandLandmarks;
 }
 
 function frame(now) {

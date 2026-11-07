@@ -44,6 +44,8 @@ class EngineTests(unittest.TestCase):
     def test_hand_trackers_are_isolated_and_mirrored(self):
         first, second = Session(), Session()
         hand = [{"x": 0.9, "y": 0.7} for _ in range(21)]
+        hand[0]["y"] = 0.9
+        hand[5]["y"] = 0.8
         hand[8]["y"] = 0.5
         first.update(validate_events([event(landmarks=hand, paused=True)] * 3))
         self.assertEqual(first.cursor[0], "DRAW")
@@ -51,7 +53,31 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(first.game.state, "READY")
         self.assertEqual(second.cursor, ("IDLE", None))
         first.update(validate_events([event(landmarks=None)]))
+        self.assertEqual(first.cursor[0], "DRAW")
+        first.update(validate_events([event(landmarks=None)] * 15))
         self.assertEqual(first.cursor, ("IDLE", None))
+
+    def test_tracking_gap_does_not_finish_route_before_destination(self):
+        session = Session()
+        hand = [{"x": 0.9, "y": 0.5} for _ in range(21)]
+        hand[0]["y"] = 0.9
+        hand[5]["y"] = 0.8
+        hand[6]["y"] = 0.7
+        session.update(validate_events([event(landmarks=hand)] * 3))
+        for x in range(110, 400, 10):
+            hand[8]["x"] = 1 - x / 960
+            # Move the whole hand horizontally, keeping the drawing gesture.
+            for landmark in hand:
+                landmark["x"] = hand[8]["x"]
+            session.update(validate_events([event(landmarks=hand)]))
+        self.assertGreater(len(session.game.raw_path), game.MIN_PATH_POINTS)
+        session.update(validate_events([event(landmarks=None)] * 5))
+        self.assertEqual(session.game.state, "DRAWING")
+        session.update(validate_events([event(landmarks=hand)]))
+        self.assertEqual(session.game.state, "DRAWING")
+        # Switching to mouse still releases immediately rather than using the grace period.
+        session.update(validate_events([event()]))
+        self.assertEqual(session.game.state, "INVALID")
 
     def test_bad_input_is_rejected(self):
         for events in ([], [event(dt=float("nan"))], [event(dt=-1)], [event(landmarks=[])], [{"action": "unknown"}], [event(point={"x": 1e9, "y": 0})]):

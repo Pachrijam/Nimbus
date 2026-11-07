@@ -93,7 +93,7 @@ def main():
                     timestamp_ms,
                 )
                 landmarks = result.hand_landmarks[0] if result.hand_landmarks else None
-                mode, point = gestures.get_gesture(landmarks, width, height)
+                mode, point = gestures.get_gesture(landmarks, width, height, dt=dt)
 
             if free_draw_mode:
                 free_draw.update(mode, point)
@@ -130,7 +130,7 @@ def main():
                     camera.release()
                     camera = None
                 mouse_state.update(point=None, drawing=False)
-                gestures.get_gesture(None, width, height)
+                gestures.reset_gesture()
             elif key == ord("f"):
                 fullscreen = not fullscreen
                 cv2.setWindowProperty(
