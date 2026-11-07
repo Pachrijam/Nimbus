@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#081321">
     <title>Nimbus</title>
-    <link rel="icon" type="image/png" href="./images/nimbus_favicon.png?v=2">
+    <link rel="icon" type="image/png" href="./images/favicon.png">
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
@@ -24,7 +24,6 @@
           <h1 id="page-title">Draw a path. <span>Fly the mission.</span></h1>
           <p class="intro-copy">Guide the drone around storm cells and reach the destination. Use your mouse or draw in the air with your hand.</p>
         </div>
-        <div class="mission-chip"><span class="chip-icon" aria-hidden="true">✦</span><span>MISSION <strong>01</strong></span></div>
       </section>
 
       <section class="game-panel" aria-label="Nimbus game">
@@ -38,7 +37,7 @@
             </button>
           </div>
           <div class="toolbar-group">
-            <button class="icon-button" id="free-draw" type="button" title="Toggle free draw (P)" aria-label="Toggle free draw">✎</button>
+            <button class="icon-button" id="free-draw" type="button" title="Toggle free draw (P)" aria-label="Toggle free draw" aria-pressed="false">✎</button>
             <button class="icon-button" id="autopilot" type="button" title="Toggle autopilot view (V)" aria-label="Toggle autopilot view">⌁</button>
             <button class="icon-button" id="clear" type="button" title="Clear drawing (C)" aria-label="Clear drawing">↺</button>
             <span class="toolbar-divider" aria-hidden="true"></span>
@@ -47,6 +46,7 @@
         </div>
 
         <div class="canvas-wrap" id="canvas-wrap">
+          <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
           <canvas id="game-canvas" width="960" height="600" aria-label="Game field. In mouse mode, hold the pointer near the drone and drag to draw a route."></canvas>
           <div class="camera-preview hidden" id="camera-preview" aria-label="Mirrored webcam preview">
             <video id="camera-video" autoplay playsinline muted></video>

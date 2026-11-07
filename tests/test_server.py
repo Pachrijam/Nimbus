@@ -113,6 +113,38 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(flight.state, "READY")
         self.assertEqual(flight.raw_path, [])
 
+    def test_hand_route_near_star_snaps_to_destination_and_flies_there(self):
+        flight = game.Game(960, 600, headless=True)
+        flight.star = (840, 300)
+        flight.cloud_layout = []
+        flight.retry()
+        endpoint = (840 - game.HAND_FINISH_RADIUS, 300)
+        for x in range(90, endpoint[0] + 1, 10):
+            flight.update("DRAW", (x, 300), 0.02, gesture_input=True)
+        flight.update("IDLE", None, 0.05, gesture_input=True)
+        self.assertEqual(flight.state, "DRAWING")
+        flight.update("HOVER", endpoint, 0.05, gesture_input=True)
+        self.assertEqual(flight.state, "FLYING")
+        self.assertEqual(flight.path[-1], flight.star)
+        self.assertEqual(flight.score, 0)
+        for _ in range(240):
+            flight.update("IDLE", None, 0.02, gesture_input=True)
+        self.assertEqual(flight.state, "LANDED")
+
+    def test_hand_finish_tolerance_has_a_limit_and_only_applies_to_gestures(self):
+        for gesture_input, distance, expected in ((True, 61, "DRAWING"),
+                                                   (False, 60, "INVALID")):
+            with self.subTest(gesture_input=gesture_input):
+                flight = game.Game(960, 600, headless=True)
+                flight.star = (840, 300)
+                for x in range(90, 771, 10):
+                    flight.update("DRAW", (x, 300), 0.02, gesture_input=gesture_input)
+                endpoint = (840 - distance, 300)
+                flight.update("DRAW", endpoint, 0.02, gesture_input=gesture_input)
+                flight.update("HOVER", endpoint, 0.05, gesture_input=gesture_input)
+                self.assertEqual(flight.state, expected)
+                self.assertEqual(flight.raw_path[-1], endpoint)
+
     def test_bad_input_is_rejected(self):
         for events in ([], [event(dt=float("nan"))], [event(dt=-1)], [event(landmarks=[])], [{"action": "unknown"}], [event(point={"x": 1e9, "y": 0})]):
             with self.subTest(events=events), self.assertRaises(ValueError):
