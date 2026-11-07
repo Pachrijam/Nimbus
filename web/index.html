@@ -38,7 +38,7 @@
             </button>
           </div>
           <div class="toolbar-group">
-            <button class="icon-button" id="free-draw" type="button" title="Toggle free draw (P)" aria-label="Toggle free draw">✎</button>
+            <button class="icon-button" id="free-draw" type="button" title="Toggle free draw (P)" aria-label="Toggle free draw" aria-pressed="false">✎</button>
             <button class="icon-button" id="autopilot" type="button" title="Toggle autopilot view (V)" aria-label="Toggle autopilot view">⌁</button>
             <button class="icon-button" id="clear" type="button" title="Clear drawing (C)" aria-label="Clear drawing">↺</button>
             <span class="toolbar-divider" aria-hidden="true"></span>
@@ -47,6 +47,7 @@
         </div>
 
         <div class="canvas-wrap" id="canvas-wrap">
+          <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
           <canvas id="game-canvas" width="960" height="600" aria-label="Game field. In mouse mode, hold the pointer near the drone and drag to draw a route."></canvas>
           <div class="camera-preview hidden" id="camera-preview" aria-label="Mirrored webcam preview">
             <video id="camera-video" autoplay playsinline muted></video>

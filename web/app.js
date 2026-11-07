@@ -317,7 +317,7 @@ function drawFreeDraw() {
   ctx.textAlign = "left";
   ctx.fillStyle = "#fff";
   ctx.font = "600 15px 'DM Sans', sans-serif";
-  ctx.fillText("FREE DRAW  ·  drag to draw  ·  C to clear", 24, 35);
+  ctx.fillText("FREE DRAW  ·  C to clear  ·  Esc or P to return to game", 24, 35);
 }
 
 let freeInk = [];
@@ -575,12 +575,26 @@ inputButtons.mouse.addEventListener("click", () => {
   setStatus("Drag from the drone to draw a route. Release to launch.");
 });
 inputButtons.hand.addEventListener("click", enableHandTracking);
-document.querySelector("#free-draw").addEventListener("click", (event) => {
-  freeDraw = !freeDraw;
+function setFreeDraw(enabled) {
+  freeDraw = enabled;
   activeStroke = null;
-  event.currentTarget.classList.toggle("active", freeDraw);
-  setStatus(freeDraw ? "Free draw: drag anywhere to sketch. Press C to clear." : "Drag from the drone to draw a route. Release to launch.");
-});
+  input.drawing = false;
+  input.mode = "IDLE";
+  input.point = null;
+  const toggle = document.querySelector("#free-draw");
+  toggle.classList.toggle("active", freeDraw);
+  toggle.setAttribute("aria-pressed", String(freeDraw));
+  toggle.title = freeDraw ? "Back to game (P)" : "Toggle free draw (P)";
+  document.querySelector("#exit-free-draw").classList.toggle("hidden", !freeDraw);
+  setStatus(freeDraw
+    ? "Free draw: sketch anywhere. C clears; Back to game, Esc, or P exits."
+    : selectedInput === "HAND"
+      ? "Draw to the gold destination with one finger, then hold up two fingers to launch."
+      : "Drag from the drone to draw a route. Release to launch.");
+}
+
+document.querySelector("#free-draw").addEventListener("click", () => setFreeDraw(!freeDraw));
+document.querySelector("#exit-free-draw").addEventListener("click", () => setFreeDraw(false));
 document.querySelector("#autopilot").addEventListener("click", (event) => {
   autopilot = !autopilot;
   event.currentTarget.classList.toggle("active", autopilot);
@@ -605,6 +619,7 @@ window.addEventListener("keydown", (event) => {
   if (key === "r") retry();
   else if (key === "n") nextLevel();
   else if (key === "p") document.querySelector("#free-draw").click();
+  else if (key === "escape" && freeDraw) setFreeDraw(false);
   else if (key === "v") document.querySelector("#autopilot").click();
   else if (key === "c") {
     freeInk = [];
