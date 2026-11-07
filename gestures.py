@@ -39,6 +39,7 @@ def get_gesture(landmarks, w, h):
         return "IDLE", None
 
     tip = landmarks[INDEX_TIP]
+    print("tip y:", round(landmarks[8].y, 2), " knuckle y:", round(landmarks[6].y,2))
     x = int(tip.x * w)
     y = int(tip.y * h)
 
