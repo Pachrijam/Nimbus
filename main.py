@@ -99,7 +99,7 @@ def main():
                 free_draw.update(mode, point)
                 output = free_draw.draw(frame)
             else:
-                flight_game.update(mode, point, dt)
+                flight_game.update(mode, point, dt, gesture_input=not mouse_mode)
                 output = flight_game.draw(frame)
 
             if debug:
