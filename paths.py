@@ -53,6 +53,13 @@ def find_tight_turns(points, min_radius):
         if cross > 1e-9:
             radius = distance(a, b) * distance(b, c) * distance(c, a) / (2 * cross)
             tight[i] = radius < min_radius
+        else:
+            incoming = (b[0] - a[0], b[1] - a[1])
+            outgoing = (c[0] - b[0], c[1] - b[1])
+            reverses_direction = (
+                incoming[0] * outgoing[0] + incoming[1] * outgoing[1] < 0
+            )
+            tight[i] = reverses_direction and min_radius > 0
     return tight
 
 
