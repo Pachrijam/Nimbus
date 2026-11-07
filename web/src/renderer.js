@@ -37,26 +37,59 @@ export function createRenderer({ canvas, cameraVideo }) {
     }
   }
 
-  function drawCloud(cloud) {
+  function drawCloud(cloud, debug) {
     ctx.save();
-    ctx.shadowColor = "rgba(40,70,78,.2)";
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = "#f4f6ee";
-    const circles = [
-      [-0.46, 0.14, 0.56], [-0.22, -0.22, 0.63], [0.12, -0.26, 0.7],
-      [0.43, -0.02, 0.54], [0.05, 0.17, 0.65],
-    ];
-    for (const [dx, dy, scale] of circles) {
-      ctx.beginPath();
-      ctx.arc(cloud.x + dx * cloud.r, cloud.y + dy * cloud.r, scale * cloud.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = "rgba(58,91,105,.24)";
-    ctx.lineWidth = 1;
+    ctx.translate(cloud.x, cloud.y);
+    ctx.scale(cloud.r, cloud.r);
+
+    // One continuous outline: the shadow belongs to the whole cloud.
     ctx.beginPath();
-    ctx.arc(cloud.x, cloud.y, cloud.r, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.moveTo(-0.9, 0.25);
+    ctx.bezierCurveTo(-1.16, -0.02, -1.04, -0.47, -0.68, -0.48);
+    ctx.bezierCurveTo(-0.7, -0.86, -0.26, -1.08, 0, -0.82);
+    ctx.bezierCurveTo(0.25, -1.06, 0.7, -0.88, 0.72, -0.51);
+    ctx.bezierCurveTo(1.12, -0.47, 1.2, 0.05, 0.99, 0.29);
+    ctx.bezierCurveTo(1.14, 0.64, 0.68, 0.91, 0.4, 0.78);
+    ctx.bezierCurveTo(0.1, 1.02, -0.32, 0.9, -0.45, 0.74);
+    ctx.bezierCurveTo(-0.84, 0.85, -1.15, 0.63, -0.9, 0.25);
+    ctx.closePath();
+    const body = ctx.createLinearGradient(0, -1, 0.25, 1);
+    body.addColorStop(0, "#ffffff");
+    body.addColorStop(0.35, "#edf3f6");
+    body.addColorStop(0.7, "#c1d1df");
+    body.addColorStop(1, "#829bb4");
+    ctx.fillStyle = body;
+    ctx.shadowColor = "rgba(35,63,86,.23)";
+    ctx.shadowBlur = cloud.r * 0.18;
+    ctx.shadowOffsetY = cloud.r * 0.12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowColor = "transparent";
+
+    ctx.save();
+    ctx.clip();
+    const light = ctx.createRadialGradient(-0.36, -0.5, 0.05, -0.24, -0.35, 1.05);
+    light.addColorStop(0, "rgba(255,255,255,.9)");
+    light.addColorStop(0.5, "rgba(255,255,255,.35)");
+    light.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = light;
+    ctx.fillRect(-1.3, -1.3, 2.6, 2.6);
+    const shade = ctx.createRadialGradient(0.5, 0.55, 0, 0.5, 0.55, 0.95);
+    shade.addColorStop(0, "rgba(74,100,135,.24)");
+    shade.addColorStop(1, "rgba(74,100,135,0)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(-1.3, -1.3, 2.6, 2.6);
+    ctx.restore();
+
+    if (debug) {
+      ctx.strokeStyle = "rgba(58,91,105,.6)";
+      ctx.lineWidth = 1 / cloud.r;
+      ctx.setLineDash([4 / cloud.r, 4 / cloud.r]);
+      ctx.beginPath();
+      ctx.arc(0, 0, 1, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -284,7 +317,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fillStyle = "rgba(255,255,255,.85)";
     ctx.fillRect(game.pad.x - 40, game.pad.y + 24, 80, 3);
     drawDestination(game.star.x, game.star.y, game.starRadius);
-    for (const cloud of game.clouds) drawCloud(cloud);
+    for (const cloud of game.clouds) drawCloud(cloud, debug);
 
     if (game.state === "DRAWING") drawRoutePreview(game);
     else if (game.state === "FLYING") drawPath(game.path, "rgba(255,255,255,.86)", 3, true);

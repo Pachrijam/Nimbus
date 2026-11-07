@@ -7,6 +7,7 @@ Owner: Paul
 Colors are BGR, not RGB.
 """
 import math
+from functools import lru_cache
 
 import cv2
 import numpy as np
@@ -28,10 +29,66 @@ def make_sky(w, h):
     return sky
 
 
+@lru_cache(maxsize=32)
+def _cloud_sprite(radius):
+    """Cache a shaded cloud and its soft outer shadow at each display size."""
+    margin = math.ceil(radius * 1.4)
+    side = margin * 2 + 1
+    # Sample a continuous Bezier outline, then antialias the silhouette.
+    curves = [
+        (-1.16, -0.02, -1.04, -0.47, -0.68, -0.48),
+        (-0.7, -0.86, -0.26, -1.08, 0, -0.82),
+        (0.25, -1.06, 0.7, -0.88, 0.72, -0.51),
+        (1.12, -0.47, 1.2, 0.05, 0.99, 0.29),
+        (1.14, 0.64, 0.68, 0.91, 0.4, 0.78),
+        (0.1, 1.02, -0.32, 0.9, -0.45, 0.74),
+        (-0.84, 0.85, -1.15, 0.63, -0.9, 0.25),
+    ]
+    start = np.array([-0.9, 0.25])
+    outline = [start]
+    t = np.linspace(0, 1, 20)[:, None]
+    for curve in curves:
+        a, b, end = np.array(curve).reshape(3, 2)
+        outline.extend((1 - t) ** 3 * start + 3 * (1 - t) ** 2 * t * a
+                       + 3 * (1 - t) * t ** 2 * b + t ** 3 * end)
+        start = end
+    mask = np.zeros((side * 2, side * 2), dtype=np.uint8)
+    points = np.rint((np.array(outline) * radius + margin) * 2).astype(np.int32)
+    cv2.fillPoly(mask, [points], 255, cv2.LINE_AA)
+    alpha = cv2.resize(mask, (side, side), interpolation=cv2.INTER_AREA) / 255.0
+
+    yy, xx = np.mgrid[:side, :side].astype(float)
+    xx, yy = (xx - margin) / radius, (yy - margin) / radius
+    stops = [0, 0.35, 0.7, 1]
+    colors = np.array([(255, 255, 255), (246, 243, 237),
+                       (223, 209, 193), (180, 155, 130)])  # BGR
+    height = np.clip((yy + 1) / 2, 0, 1)
+    color = np.stack([np.interp(height, stops, colors[:, c]) for c in range(3)], axis=-1)
+    light = np.clip(1 - np.hypot(xx + 0.3, yy + 0.4) / 1.05, 0, 1) * 0.8
+    color += (255 - color) * light[..., None]
+    shade = np.clip(1 - np.hypot(xx - 0.5, yy - 0.55) / 0.95, 0, 1) * 0.24
+    color += (np.array([135, 100, 74]) - color) * shade[..., None]
+
+    shadow = cv2.warpAffine(alpha, np.float32([[1, 0, 0], [0, 1, radius * 0.12]]),
+                            (side, side))
+    shadow = cv2.GaussianBlur(shadow, (0, 0), max(0.5, radius * 0.09)) * 0.23
+    opacity = alpha + shadow * (1 - alpha)
+    premultiplied = (color * alpha[..., None]
+                     + np.array([86, 63, 35]) * (shadow * (1 - alpha))[..., None])
+    return margin, premultiplied, opacity[..., None]
+
+
 def draw_cloud(img, x, y, r):
-    """TODO (Paul): puffy cloud from several overlapping circles + soft shadow.
-    Keep the collision circle (x, y, r) roughly matching what players see."""
-    cv2.circle(img, (int(x), int(y)), int(r), CLOUD_COLOR, -1, cv2.LINE_AA)
+    """Composite one softly shaded cloud, clipping safely at screen edges."""
+    margin, color, opacity = _cloud_sprite(max(1, round(r)))
+    left, top = round(x) - margin, round(y) - margin
+    x0, y0 = max(0, left), max(0, top)
+    x1, y1 = min(img.shape[1], left + color.shape[1]), min(img.shape[0], top + color.shape[0])
+    if x0 >= x1 or y0 >= y1:
+        return
+    crop = np.s_[y0 - top:y1 - top, x0 - left:x1 - left]
+    img[y0:y1, x0:x1] = np.clip(
+        color[crop] + img[y0:y1, x0:x1] * (1 - opacity[crop]), 0, 255).astype(np.uint8)
 
 
 def draw_star(img, x, y, r):
