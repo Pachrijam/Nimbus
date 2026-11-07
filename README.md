@@ -4,8 +4,6 @@
 
 ## Architecture
 
-### Repository layout
-
 ```text
 .
 ├── main.py                 # Desktop OpenCV application entry point
@@ -13,45 +11,48 @@
 ├── game.py                 # Game states, levels, scoring, and collisions
 ├── physics.py              # Flight movement and steering
 ├── paths.py                # Route smoothing, resampling, and turn checks
-├── gestures.py             # Hand landmark gesture recognition
+├── gestures.py             # Hand landmark gesture recognition and smoothing
 ├── visuals.py              # Desktop game rendering
 ├── freedraw.py             # Desktop free-draw mode
-├── requirements.txt        # Python dependencies for the desktop app
+├── requirements.txt        # Python dependencies
+├── hand_landmarker.task    # MediaPipe hand-tracking model for desktop use
 ├── web/
 │   ├── index.html          # Browser page and controls
 │   ├── styles.css          # Browser layout and styling
 │   ├── images/
 │   │   └── favicon.png     # Nimbus browser icon
 │   └── src/
-│       ├── app.js          # Browser app entry point and animation loop
-│       ├── camera.js       # Webcam access and hand landmark detection
-│       ├── config.js       # Browser game and display constants
-│       ├── controls.js     # Hand tracking controls, keyboard, and free-draw input
-│       ├── game-client.js  # Requests and session updates to server.py
-│       ├── renderer.js     # Canvas rendering
-│       └── ui.js           # Status messages and browser UI updates
+│       ├── app.js          # Connects client, camera, controls, UI, and renderer
+│       ├── camera.js       # Webcam access and MediaPipe hand landmarks
+│       ├── config.js       # Canvas dimensions
+│       ├── controls.js     # Hand tracking, keyboard, and free-draw controls
+│       ├── game-client.js  # Game session and update API requests
+│       ├── renderer.js     # Canvas game rendering
+│       └── ui.js           # Status messages and UI updates
 ├── tests/
 │   ├── test_gestures.py    # Gesture recognition tests
 │   └── test_server.py      # Game engine and HTTP API tests
-└── documentation/
+└── docs/
     ├── OVERVIEW.md         # Project overview and design
     └── STEPS.md            # Development tasks and checkpoints
 ```
 
 ### How the pieces fit together
 
-- **Browser version:** `web/src/app.js` connects the camera, controls, renderer,
-  UI, and game client. It sends hand-landmark input to `server.py`;
-  the server creates an isolated game session and applies the shared game logic
-  from `game.py`, `gestures.py`, `paths.py`, and `physics.py`. The browser
-  renders returned snapshots on the canvas. Camera video is processed locally
-  and is not sent to the server.
-- **Desktop version:** `main.py` captures and mirrors webcam frames, runs
-  MediaPipe hand tracking when available, and sends gestures to `game.Game` or
-  `freedraw.FreeDraw`. The game uses `paths.py` and `physics.py`; `visuals.py`
-  draws the result with OpenCV.
-- **Deployment:** Nginx serves HTTPS and reverse-proxies requests to the
-  `server.py` process on `127.0.0.1:8000`. See the Vultr instructions below.
+- **Browser:** `web/src/app.js` coordinates the camera, controls, game client,
+  UI, and renderer. `camera.js` processes webcam frames locally with MediaPipe;
+  only hand landmarks (not camera video) are sent to `server.py`. The server
+  creates an in-memory game session for each browser tab, recognizes gestures,
+  runs the shared game logic, and returns snapshots for `renderer.js` to draw.
+- **Shared game logic:** `game.py` manages levels, routes, collisions, and
+  scoring; `paths.py` smooths and resamples routes; `physics.py` moves the
+  aircraft; and `gestures.py` recognizes and smooths hand gestures. `server.py`
+  uses these modules for browser sessions.
+- **Desktop:** `main.py` captures webcam frames, runs MediaPipe hand tracking,
+  and updates either `game.Game` or `freedraw.FreeDraw`. `visuals.py` renders
+  the game with OpenCV.
+- **Deployment:** Nginx provides HTTPS and reverse-proxies browser requests to
+  `server.py` on `127.0.0.1:8000`; HTTPS is needed for browser camera access.
 
 ## Run
 
