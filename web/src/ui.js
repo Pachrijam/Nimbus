@@ -4,6 +4,7 @@ export function createUI({ canvas, statusText, toast }) {
 
   function updateComparison(result, visible) {
     comparisonPanel.classList.toggle("hidden", !visible);
+    document.querySelector("#gemini-replay").disabled = !visible || result?.status !== "ready";
     if (!visible) return;
     const write = (id, value) => {
       const element = document.querySelector(`#${id}`);
@@ -49,6 +50,9 @@ export function createUI({ canvas, statusText, toast }) {
     const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
     state.game = snapshot;
     updateComparison(snapshot.comparison, Boolean(snapshot.comparison) && !freeDraw);
+    if (!freeDraw && snapshot.comparison?.status === "ready" && (changed || game?.comparison?.status !== "ready")) {
+      showToast("Watch Gemini's purple drone fly its route. Your flight stays orange.", 5000);
+    }
     if (selectedInput === "HAND") Object.assign(input, snapshot.cursor);
     canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two fingers to launch.`);
     if (changed && !freeDraw) {

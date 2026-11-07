@@ -5,6 +5,12 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
   function nextLevel() { queueEvent({ action: "next" }); }
   document.querySelector("#challenge-retry").addEventListener("click", retry);
   document.querySelector("#challenge-next").addEventListener("click", nextLevel);
+  document.querySelector("#gemini-replay").addEventListener("click", () => {
+    if (state.game?.state !== "LANDED" || state.game.comparison?.status !== "ready") return;
+    state.geminiReplay = (state.geminiReplay ?? 0) + 1;
+    document.querySelector("#game-canvas").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setStatus("Replaying Gemini's flight in purple. Your flight stays orange.");
+  });
 
   function setInputMode(mode) {
     if (mode !== "HAND") camera.stopCamera();

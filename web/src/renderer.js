@@ -1,7 +1,9 @@
 import { WIDTH, HEIGHT } from "./config.js";
+import { createGeminiReplay } from "./replay.js";
 
 export function createRenderer({ canvas, cameraVideo }) {
   const ctx = canvas.getContext("2d");
+  const geminiReplay = createGeminiReplay();
 
   function roundedRect(context, x, y, width, height, radius) {
     context.beginPath();
@@ -117,7 +119,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.restore();
   }
 
-  function drawDrone(plane) {
+  function drawDrone(plane, gemini = false) {
     ctx.save();
     ctx.translate(plane.x, plane.y);
     ctx.rotate(plane.heading);
@@ -156,7 +158,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     }
 
     // Light body and a cyan front camera show which way the drone is heading.
-    ctx.fillStyle = "#edf5f7";
+    ctx.fillStyle = gemini ? "#b897f4" : "#edf5f7";
     ctx.strokeStyle = "#243746";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -300,8 +302,34 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fillText("FREE DRAW  ·  C to clear  ·  Esc or P to return to game", 24, 35);
   }
 
-  function render(state, cameraActive) {
+  function drawComparisonStatus(game, replay) {
+    const result = game.comparison;
+    let title = "Delivered! Gemini is planning and testing its routes...";
+    let detail = "Your flight is orange. Gemini's flight will appear in purple.";
+    if (replay) {
+      title = replay.done ? "Gemini's flight complete" : `Watch Gemini fly: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`;
+      detail = "Orange: your flight   |   Purple: Gemini   |   Replay and results below";
+    } else if (result && result.status !== "pending") {
+      title = "Delivered! Gemini's flight is unavailable.";
+      detail = result.message;
+    }
+    ctx.save();
+    roundedRect(ctx, 90, HEIGHT - 82, WIDTH - 180, 66, 10);
+    ctx.fillStyle = "rgba(10,26,38,.94)";
+    ctx.fill();
+    ctx.textAlign = "center";
+    ctx.fillStyle = replay ? "#d8c3ff" : "#ffda8b";
+    ctx.font = "600 17px 'DM Sans', sans-serif";
+    ctx.fillText(title, WIDTH / 2, HEIGHT - 55, WIDTH - 210);
+    ctx.fillStyle = "#edf5f7";
+    ctx.font = "13px 'DM Sans', sans-serif";
+    ctx.fillText(detail, WIDTH / 2, HEIGHT - 32, WIDTH - 210);
+    ctx.restore();
+  }
+
+  function render(state, cameraActive, now = performance.now()) {
     const { game, input, connectionError, freeDraw, freeInk, autopilot, debug } = state;
+    const replay = geminiReplay.frame(state, now);
     if (!game || connectionError) {
       drawBackground();
       drawMessage(connectionError ? "CONNECTION LOST" : "CONNECTING...");
@@ -317,14 +345,15 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fillStyle = "rgba(255,255,255,.85)";
     ctx.fillRect(game.pad.x - 40, game.pad.y + 24, 80, 3);
     drawDestination(game.star.x, game.star.y, game.starRadius);
-    for (const cloud of game.clouds) drawCloud(cloud, debug);
+    for (const cloud of replay?.clouds ?? game.clouds) drawCloud(cloud, debug);
 
     if (game.state === "DRAWING") drawRoutePreview(game);
     else if (game.state === "FLYING") drawPath(game.path, "rgba(255,255,255,.86)", 3, true);
     else if (game.state === "LANDED") {
-      drawPath(game.trajectory, "#b43b13", 4);
+      drawPath(game.trajectory, "#b43b13", 7);
       if (game.comparison?.status === "ready") {
         drawPath(game.comparison.aiTrajectory, "#6334a7", 4, true);
+        if (replay && !replay.done) drawPath(replay.trail, "#8d50df", 5);
       }
     }
 
@@ -352,8 +381,23 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.fill();
     }
     drawDrone(game.plane);
+    if (replay) {
+      ctx.save();
+      ctx.strokeStyle = "#6334a7";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(replay.plane.x, replay.plane.y, 28, 0, Math.PI * 2);
+      ctx.stroke();
+      drawDrone(replay.plane, true);
+      ctx.fillStyle = "#412074";
+      ctx.font = "700 13px 'DM Sans', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("GEMINI", replay.plane.x, replay.plane.y - 35);
+      ctx.restore();
+    }
     drawHud(game);
     drawCursor(input);
+    if (game.state === "LANDED") drawComparisonStatus(game, replay);
 
     if (game.state === "READY") {
       ctx.fillStyle = "rgba(14,39,50,.78)";

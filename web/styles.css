@@ -143,6 +143,7 @@ kbd:first-child { margin-left: 0; }
 .ai-line { margin-left: 14px; border-top: 3px dashed #bb9ce9; }
 .comparison-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .comparison-actions .tool-button { min-height: 44px; border-color: var(--line); }
+.comparison-actions .tool-button:disabled { opacity: .45; cursor: default; }
 button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 
 @media (max-width: 700px) {

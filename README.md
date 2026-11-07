@@ -120,6 +120,13 @@ show flight times, your best time on this level, and AI performance
 a mathematically guaranteed optimal path. Gemini's machine learning generates
 the routes; the simulator computes every metric, not the model.
 
+In the browser, a purple Gemini drone automatically replays its verified flight
+after the benchmark is ready. Your flight stays orange, and the storms replay
+from their original launch positions. The full dashed Gemini route remains
+visible afterward. Use **Replay Gemini's flight** below the field to watch again
+without making another API request. Planning and unavailable messages also
+appear on the field while you wait.
+
 Press **R / Try to beat Gemini** for the same layout and benchmark, or **N / Next
 level** to continue. Rematches keep your best time without repeatedly awarding
 the level's delivery points. Failed flights still retry automatically.
