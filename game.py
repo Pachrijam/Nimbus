@@ -12,6 +12,7 @@ import physics
 
 START_RADIUS = 40        # px: the path must start this close to the plane
 STAR_RADIUS = 28
+HAND_FINISH_RADIUS = 60  # px: snap a nearby hand-drawn endpoint to the star
 MIN_PATH_POINTS = 10     # ignore accidental tiny paths
 MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
 PAD_MARGIN = 90          # px from the left edge
@@ -144,9 +145,11 @@ class Game:
                 self.finish_path()
             elif (mode == "HOVER" and point is not None
                   and len(self.raw_path) >= MIN_PATH_POINTS
-                  and paths.distance(self.raw_path[-1], self.star) <= STAR_RADIUS):
+                  and paths.distance(self.raw_path[-1], self.star) <= HAND_FINISH_RADIUS):
                 # A lost/uncertain hand pauses the route. Even two fingers should
                 # preserve an unfinished route so the user can resume drawing.
+                if self.raw_path[-1] != self.star:
+                    self.raw_path.append(self.star)
                 self.finish_path()
 
         elif self.state == "FLYING":
