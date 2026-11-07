@@ -19,6 +19,9 @@ const input = { mode: "IDLE", point: null, drawing: false };
 
 let handLandmarker = null;
 let cameraStream = null;
+let cameraRequest = 0;
+let handTrackingLoad = null;
+let handTrackingStarting = false;
 let cameraError = "";
 let selectedInput = "MOUSE";
 let toastTimeout = 0;
@@ -402,6 +405,7 @@ function canvasPoint(event) {
 }
 
 function setInputMode(mode) {
+  if (mode !== "HAND") stopCamera();
   selectedInput = mode;
   input.mode = "IDLE";
   input.point = null;
@@ -414,49 +418,80 @@ function setInputMode(mode) {
   }
 }
 
-async function enableCamera() {
+function stopCamera() {
+  cameraRequest += 1;
+  handTrackingStarting = false;
+  if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop());
+  cameraStream = null;
+  cameraVideo.pause();
+  cameraVideo.srcObject = null;
+  cameraPreview.classList.add("hidden");
+}
+
+async function enableCamera(request) {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("Camera access requires HTTPS or localhost and a browser that supports webcam input.");
   }
   if (!cameraStream) {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
     });
+    // A permission prompt can finish after the user has switched back to mouse.
+    if (request !== cameraRequest) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    cameraStream = stream;
     cameraVideo.srcObject = cameraStream;
     await cameraVideo.play();
+    if (request !== cameraRequest) return;
     cameraPreview.classList.remove("hidden");
   }
 }
 
 async function enableHandTracking() {
+  if (selectedInput === "HAND" || handTrackingStarting) return;
+  const request = ++cameraRequest;
+  handTrackingStarting = true;
   setStatus("Requesting camera access…");
   try {
-    await enableCamera();
+    await enableCamera(request);
+    if (request !== cameraRequest) return;
     if (!handLandmarker) {
       setStatus("Loading hand-tracking model…");
-      const vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}`);
-      const fileset = await vision.FilesetResolver.forVisionTasks(
-        `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`,
-      );
-      const options = {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
-        runningMode: "VIDEO",
-        numHands: 1,
-      };
-      try {
-        handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, options);
-      } catch {
-        handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, {
-          ...options,
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
+      if (!handTrackingLoad) {
+        handTrackingLoad = (async () => {
+          const vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}`);
+          const fileset = await vision.FilesetResolver.forVisionTasks(
+            `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`,
+          );
+          const options = {
+            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+            runningMode: "VIDEO",
+            numHands: 1,
+          };
+          try {
+            handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, options);
+          } catch {
+            handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+              ...options,
+              baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
+            });
+          }
+        })().finally(() => {
+          handTrackingLoad = null;
         });
       }
+      await handTrackingLoad;
     }
+    if (request !== cameraRequest) return;
+    handTrackingStarting = false;
     cameraError = "";
     setInputMode("HAND");
     setStatus("Hand tracking is on. Raise one finger to draw; raise two to release.");
   } catch (error) {
+    if (request !== cameraRequest) return;
     cameraError = error instanceof Error ? error.message : String(error);
     setInputMode("MOUSE");
     setStatus("Hand tracking could not start. Mouse drawing is ready.");
@@ -465,7 +500,7 @@ async function enableHandTracking() {
 }
 
 function handLandmarks() {
-  if (!handLandmarker || cameraVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
+  if (!cameraStream || !handLandmarker || cameraVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
   const result = handLandmarker.detectForVideo(cameraVideo, performance.now());
   return result.landmarks?.[0]?.map(({ x, y }) => ({ x, y })) ?? null;
 }
