@@ -84,23 +84,65 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.restore();
   }
 
-  function drawPlane(plane) {
+  function drawDrone(plane) {
     ctx.save();
     ctx.translate(plane.x, plane.y);
     ctx.rotate(plane.heading);
-    ctx.fillStyle = "#243746";
-    ctx.strokeStyle = "rgba(255,255,255,.8)";
-    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+
+    // Four arms and guarded rotors make the silhouette readable at game size.
+    const rotors = [[-13, -11], [13, -11], [-13, 11], [13, 11]];
+    ctx.strokeStyle = "#243746";
+    ctx.lineWidth = 5;
+    for (const [x, y] of rotors) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+    for (const [x, y] of rotors) {
+      ctx.fillStyle = "#243746";
+      ctx.strokeStyle = "#edf5f7";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "#9db9c7";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 4, y - 3);
+      ctx.lineTo(x + 4, y + 3);
+      ctx.moveTo(x - 3, y + 4);
+      ctx.lineTo(x + 3, y - 4);
+      ctx.stroke();
+      ctx.fillStyle = "#edf5f7";
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Light body and a cyan front camera show which way the drone is heading.
+    ctx.fillStyle = "#edf5f7";
+    ctx.strokeStyle = "#243746";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(20, 0);
-    ctx.lineTo(-13, -12);
-    ctx.lineTo(-7, -2);
-    ctx.lineTo(-16, 4);
-    ctx.lineTo(-11, 9);
-    ctx.lineTo(-4, 5);
+    ctx.moveTo(-9, -6);
+    ctx.lineTo(6, -6);
+    ctx.lineTo(11, -3);
+    ctx.lineTo(11, 3);
+    ctx.lineTo(6, 6);
+    ctx.lineTo(-9, 6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    ctx.fillStyle = "#243746";
+    roundedRect(ctx, -6, -3, 8, 6, 2);
+    ctx.fill();
+    ctx.fillStyle = "#36cbe0";
+    ctx.beginPath();
+    ctx.arc(7, 0, 2.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 
@@ -270,7 +312,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.arc(game.plane.target.x, game.plane.target.y, 6, 0, Math.PI * 2);
       ctx.fill();
     }
-    drawPlane(game.plane);
+    drawDrone(game.plane);
     drawHud(game);
     drawCursor(input);
 

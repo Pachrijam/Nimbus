@@ -45,12 +45,38 @@ def draw_pad(img, x, y):
 
 
 def draw_plane(img, x, y, heading, size=18):
-    """Triangle pointing along heading (radians). TODO (Paul): nicer paper-plane shape."""
-    nose = (x + size * math.cos(heading), y + size * math.sin(heading))
-    left = (x + size * 0.7 * math.cos(heading + 2.5), y + size * 0.7 * math.sin(heading + 2.5))
-    right = (x + size * 0.7 * math.cos(heading - 2.5), y + size * 0.7 * math.sin(heading - 2.5))
-    pts = np.array([nose, left, right], dtype=np.int32)
-    cv2.fillPoly(img, [pts], PLANE_COLOR, cv2.LINE_AA)
+    """Top-down quadcopter, with its front camera pointing along heading."""
+    scale = size / 18
+    c, s = math.cos(heading), math.sin(heading)
+    dark, light = (70, 55, 36), (247, 245, 237)
+
+    def point(px, py):
+        return (round(x + scale * (px * c - py * s)),
+                round(y + scale * (px * s + py * c)))
+
+    def line(a, b, color, thickness):
+        cv2.line(img, point(*a), point(*b), color,
+                 max(1, round(thickness * scale)), cv2.LINE_AA)
+
+    rotors = [(-13, -11), (13, -11), (-13, 11), (13, 11)]
+    for rotor in rotors:
+        line((0, 0), rotor, dark, 5)
+    for rx, ry in rotors:
+        center = point(rx, ry)
+        radius = max(1, round(8 * scale))
+        cv2.circle(img, center, radius, dark, -1, cv2.LINE_AA)
+        cv2.circle(img, center, radius, light, max(1, round(scale)), cv2.LINE_AA)
+        line((rx - 4, ry - 3), (rx + 4, ry + 3), (199, 185, 157), 2)
+        line((rx - 3, ry + 4), (rx + 3, ry - 4), (199, 185, 157), 2)
+        cv2.circle(img, center, max(1, round(2 * scale)), light, -1, cv2.LINE_AA)
+
+    body = np.array([point(*p) for p in
+                     [(-9, -6), (6, -6), (11, -3), (11, 3), (6, 6), (-9, 6)]],
+                    dtype=np.int32)
+    cv2.fillPoly(img, [body], light, cv2.LINE_AA)
+    cv2.polylines(img, [body], True, dark, max(1, round(scale)), cv2.LINE_AA)
+    line((-5, 0), (0, 0), dark, 5)
+    cv2.circle(img, point(7, 0), max(1, round(2.5 * scale)), (224, 203, 54), -1, cv2.LINE_AA)
 
 
 def draw_path(img, points, color=PATH_COLOR, thickness=3):
