@@ -84,7 +84,7 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
       handTrackingStarting = false;
       cameraError = "";
       setInputMode("HAND");
-      setStatus("Pinch thumb and index finger to draw from the drone. Open the pinch to launch. Tracking gaps pause your route.");
+      setStatus("Draw a route from the drone with one finger, then hold up two fingers to launch. Tracking gaps pause your route.");
     } catch (error) {
       if (request !== cameraRequest) return;
       cameraError = error instanceof Error ? error.message : String(error);

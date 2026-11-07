@@ -1,6 +1,6 @@
 # Nimbus: Flight Path (HackRPI 2026)
 
-**Pinch your thumb and index finger to sketch a drone's route in the air. A physics simulation instantly shows whether the drone can actually fly it through the wind and around the storms.**
+**Sketch a drone's route in the air with one finger. A physics simulation instantly shows whether the drone can actually fly it through the wind and around the storms.**
 
 ## Architecture
 
@@ -77,8 +77,8 @@ python -m pip install mediapipe
 
 Drawing uses hand gestures only. The desktop app requires MediaPipe, the model,
 and a working webcam; if any is unavailable, it exits with setup instructions.
-In the browser, click **Hand tracking** and allow camera access. Pinch your thumb
-and index finger to draw, then open the pinch to launch. If camera access fails, check
+In the browser, click **Hand tracking** and allow camera access. Draw with one
+index finger, then hold up two fingers to launch. If camera access fails, check
 permissions and click **Hand tracking** again.
 
 Keys: `q` quit · `p` Free Draw/Game · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear · `d` debug

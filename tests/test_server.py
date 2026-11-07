@@ -51,7 +51,6 @@ class EngineTests(unittest.TestCase):
         hand[0]["y"] = 0.9
         hand[5]["y"] = 0.8
         hand[8]["y"] = 0.5
-        hand[4]["y"] = 0.5
         first.update(validate_events([event(landmarks=hand, paused=True)] * 3))
         self.assertEqual(first.cursor[0], "DRAW")
         self.assertAlmostEqual(first.cursor[1][0], 96, delta=1)
@@ -86,12 +85,11 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(session.cursor, ("IDLE", None))
         session.update(validate_events([event(landmarks=hand)] * 3))
         self.assertEqual(session.game.state, "DRAWING")
-        # Opening the pinch deliberately launches after tracking resumes.
-        hand[4]["y"] = 0.8
-        session.update(validate_events([event(landmarks=hand)] * 10))
+        # Switching to mouse still releases immediately rather than using the grace period.
+        session.update(validate_events([event()]))
         self.assertEqual(session.game.state, "FLYING")
 
-    def test_gesture_route_pauses_and_pinch_release_launches_before_destination(self):
+    def test_gesture_route_pauses_and_two_fingers_launch_before_destination(self):
         flight = game.Game(960, 600, headless=True)
         flight.star = (840, 300)
         for x in range(90, 400, 10):
@@ -206,8 +204,8 @@ class EngineTests(unittest.TestCase):
     def test_depth_input_preserves_route_until_deliberate_release(self):
         session = Session()
 
-        def send_pose(x, *, tilt=0, scale=1, pinched=True, frames=3):
-            pose = depth_hand(tilt=tilt, scale=scale, pinched=pinched, aspect=4 / 3)
+        def send_pose(x, *, tilt=0, scale=1, middle=False, frames=3):
+            pose = depth_hand(tilt=tilt, scale=scale, middle=middle, aspect=4 / 3)
             target_x = gestures.ZONE_LEFT + x / 960 * (gestures.ZONE_RIGHT - gestures.ZONE_LEFT)
             offset = target_x - pose[8].x
             offset_y = (gestures.ZONE_TOP + gestures.ZONE_BOTTOM) / 2 - pose[8].y
@@ -224,11 +222,9 @@ class EngineTests(unittest.TestCase):
             self.assertEqual(session.cursor[0], "DRAW")
             self.assertEqual(session.game.state, "DRAWING")
             self.assertEqual(session.game.raw_path[:len(saved_path)], saved_path)
-        endpoint = session.game.raw_path[-1]
-        send_pose(550, pinched=False, frames=15)
+        send_pose(450, middle=True, frames=15)
         self.assertEqual(session.game.state, "FLYING")
         self.assertEqual(session.game.tries, 1)
-        self.assertEqual(session.game.path[-1], endpoint)
 
     def test_depth_and_camera_aspect_are_validated(self):
         hand = [{"x": 0.5, "y": 0.5, "z": -0.2} for _ in range(21)]

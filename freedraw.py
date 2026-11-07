@@ -19,7 +19,7 @@ class FreeDraw:
         self.prev_mode = "IDLE"
  
     def update(self, mode, point):
-        # A new pinch after opening the fingers switches to the next color.
+        # A new stroke after a HOVER switches to the next color (peace sign = change pen)
         if mode == "DRAW" and self.prev_mode == "HOVER":
             self.color_index = (self.color_index + 1) % len(COLORS)
             self.color = COLORS[self.color_index]
@@ -39,7 +39,7 @@ class FreeDraw:
         output[mask] = self.ink[mask]
  
         visuals.draw_text(output, "FREE DRAW", 15, 35, 0.8, (120, 230, 255))
-        visuals.draw_text(output, "pinch: draw   open: next color   c: clear   p: back to game", 15, 62, 0.5)
+        visuals.draw_text(output, "point: draw   peace: next color   c: clear   p: back to game", 15, 62, 0.5)
         cv2.circle(output, (200, 28), 10, self.color, -1, cv2.LINE_AA)
         return output
  
