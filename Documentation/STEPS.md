@@ -28,9 +28,12 @@ Check items off as you go. Times are targets, not suggestions.
    ```
    git clone https://github.com/AVYAY-USERNAME/aircanvas.git
    cd aircanvas
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
    python -m pip install -r requirements.txt
    ```
-3. Open the folder in VS Code (**File → Open Folder**). Select the Python 3.12 interpreter (**Ctrl+Shift+P → Python: Select Interpreter**).
+   For hand tracking, also run `python -m pip install mediapipe` in the activated environment.
+3. Open the folder in VS Code (**File → Open Folder**). Select the `.venv` interpreter (**Ctrl+Shift+P → Python: Select Interpreter**).
 
 ### Everyone: the 2-minute test
 ```
@@ -212,7 +215,8 @@ Tune difficulty with Person 3, test gestures in bad lighting, fix bugs.
 ## Troubleshooting
 | Problem | Fix |
 |---|---|
-| `No module named cv2` / `mediapipe` | `python -m pip install -r requirements.txt` (never plain `pip`) |
+| `No module named cv2` | Activate the project virtual environment and run `python -m pip install -r requirements.txt` |
+| Hand tracking unavailable | Activate the project virtual environment and run `python -m pip install mediapipe`; confirm `hand_landmarker.task` is beside `main.py` |
 | Camera window black / camera fails | Close Zoom/Teams/Camera app; Settings → Privacy & security → Camera → allow desktop apps |
 | `hand_landmarker.task` not found | Run `python main.py` **from inside** the `aircanvas` folder |
 | FPS under ~20 | In `main.py`, set `CAM_WIDTH = 640`, `CAM_HEIGHT = 480` |

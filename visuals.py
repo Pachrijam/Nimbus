@@ -62,9 +62,14 @@ def draw_path(img, points, color=PATH_COLOR, thickness=3):
 
 
 def draw_route(img, points, tight_flags):
-    """Planned route with infeasible (too-tight) turns highlighted in red.
-    TODO (Paul): draw each segment white, or red if either end is flagged."""
-    draw_path(img, points)
+    """Planned route with infeasible (too-tight) turns highlighted in red."""
+    for i in range(1, len(points)):
+        color = PATH_COLOR
+        if tight_flags[i - 1] or tight_flags[i]:
+            color = (0, 0, 255)
+        start = (int(points[i - 1][0]), int(points[i - 1][1]))
+        end = (int(points[i][0]), int(points[i][1]))
+        cv2.line(img, start, end, color, 3, cv2.LINE_AA)
 
 
 def draw_trail(img, trail):
