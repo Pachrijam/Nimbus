@@ -32,10 +32,10 @@ ZONE_BOTTOM = 0.75
  
 # 2. Finger-up thresholds: tip distance / knuckle distance (from the wrist)
 INDEX_UP_RATIO = 1.10     # index counts as up above this
-MIDDLE_UP_RATIO = 1.20    # middle must be clearly up -> fewer accidental launches
+MIDDLE_UP_RATIO = 1.30    # require clearer extension before launching
  
 # Hysteresis keeps uncertain finger estimates from toggling the gesture.
-INDEX_DOWN_RATIO = 0.95
+INDEX_DOWN_RATIO = 0.85  # tolerate compressed depth estimates during a stroke
 MIDDLE_DOWN_RATIO = 1.10
 
 # Debounce in seconds: camera/display frame rates must not affect release timing.
