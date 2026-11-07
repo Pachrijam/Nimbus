@@ -11,8 +11,18 @@ def distance(a, b):
     return math.hypot(b[0] - a[0], b[1] - a[1])
 
 
+def _remove_duplicate_points(points):
+    """Remove consecutive repeats without changing the original list."""
+    result = []
+    for point in points:
+        if not result or point != result[-1]:
+            result.append(point)
+    return result
+
+
 def path_length(points):
     """Total length of the path in pixels."""
+    # Add the distance between each pair of neighboring points.
     total = 0.0
     for i in range(1, len(points)):
         total += distance(points[i - 1], points[i])
@@ -22,10 +32,12 @@ def path_length(points):
 def chaikin(points, iterations=2):
     """Smooth corners: each segment P->Q becomes two points at 25% and 75% of the way.
     Keep the first and last points unchanged. Repeat `iterations` times."""
-    result = list(points)
+    # Remove repeated points from a stationary finger before smoothing.
+    result = _remove_duplicate_points(points)
     if len(result) < 2:
         return result
     for iteration in range(iterations):
+        # Sample each segment at 25% and 75%, keeping the route endpoints.
         smooth = [result[0]]
         for i in range(len(result) - 1):
             p = result[i]
@@ -67,10 +79,13 @@ def resample(points, spacing=8.0):
     """Space points along the path; the final segment may be shorter."""
     if spacing <= 0:
         raise ValueError("spacing must be positive")
+    points = _remove_duplicate_points(points)
     if len(points) < 2:
-        return list(points)
+        return points
 
     result = [points[0]]
+    # remaining is the distance to travel before placing the next point.
+    # Carry the remaining distance across segment boundaries.
     remaining = spacing
     for i in range(1, len(points)):
         start = points[i - 1]
@@ -85,6 +100,9 @@ def resample(points, spacing=8.0):
             remaining = spacing
         remaining -= length
 
+    # Allow a shorter final segment so the endpoint is preserved.
     if distance(result[-1], points[-1]) > 1e-9:
         result.append(points[-1])
+    else:
+        result[-1] = points[-1]
     return result

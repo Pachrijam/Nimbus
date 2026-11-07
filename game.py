@@ -10,13 +10,18 @@ import random
 import paths
 import physics
 
-START_RADIUS = 40        # px: the path must start this close to the plane
+START_RADIUS = 30        # px: the path must start this close to the plane
 STAR_RADIUS = 28
 HAND_FINISH_RADIUS = 60  # px: snap a nearby hand-drawn endpoint to the star
 MIN_PATH_POINTS = 10     # ignore accidental tiny paths
 MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
 PAD_MARGIN = 90          # px from the left edge
 MAX_CLOUDS = 6
+CLOUD_RADIUS = 45
+DRAWING_PAUSE_TIME = 0.3  # seconds allowed for a brief tracking dropout
+SCREEN_MARGIN = 30
+MIN_POINT_DISTANCE = 3
+MAX_TRAIL_POINTS = 60
 MIN_WIDTH = 640
 MIN_HEIGHT = 480
 
@@ -43,10 +48,13 @@ class Game:
             import visuals
             self.sky = visuals.make_sky(self.w, self.h)
         self.pad = (PAD_MARGIN, self.h // 2)
-        self.star = (self.w - 120, random.randint(120, self.h - 120))
+        if self.level == 1:
+            self.star = (self.w - 120, self.h // 2)
+        else:
+            self.star = (self.w - 120, random.randint(120, self.h - 120))
         # Increase difficulty with each level.
         if self.level == 1:
-            num_clouds = 2
+            num_clouds = 1
             wind_strength = 0
             cloud_speed = 0
         elif self.level == 2:
@@ -66,12 +74,20 @@ class Game:
             wind_strength = 30 + (self.level - 5) * 5
             cloud_speed = 25 + (self.level - 5) * 5
 
-        # Generate clouds at random positions
         self.cloud_layout = []
+        if self.level == 1:
+            # A fixed first level makes learning and testing repeatable.
+            self.cloud_layout.append({
+                "x": self.w // 2,
+                "y": self.h // 2,
+                "r": CLOUD_RADIUS,
+                "vx": 0.0
+            })
 
-        for i in range(num_clouds):
+        # Later levels use random positions.
+        for i in range(num_clouds - len(self.cloud_layout)):
             for attempt in range(100):
-                r = 45
+                r = CLOUD_RADIUS
                 x = random.randint(180, self.w - 180)
                 y = random.randint(r, self.h - r)
 
@@ -117,6 +133,7 @@ class Game:
         self.state = "READY"
         self.timer = 0.0
         self.raw_path = []
+        self.drawing_pause = 0.0
         self.path = []
         self.trail = []
         self.plane = physics.make_plane(self.pad[0], self.pad[1])
@@ -133,24 +150,34 @@ class Game:
 
         if self.state == "READY":
             if mode == "DRAW" and point is not None:
-                if paths.distance(point, self.pad) <= START_RADIUS:
-                    self.raw_path = [point]
+                drone_position = (self.plane["x"], self.plane["y"])
+
+                if paths.distance(point, drone_position) <= START_RADIUS:
+                    self.raw_path = [drone_position]
+
+                    if point != drone_position:
+                        self.raw_path.append(point)
+
                     self.state = "DRAWING"
 
         elif self.state == "DRAWING":
             if mode == "DRAW" and point is not None:
-                if paths.distance(point, self.raw_path[-1]) >= 3:
+                self.drawing_pause = 0.0
+                if paths.distance(point, self.raw_path[-1]) >= MIN_POINT_DISTANCE:
                     self.raw_path.append(point)
-            elif not gesture_input:
+                # Launch on arrival so changing gestures cannot move the endpoint away.
+                if (len(self.raw_path) >= MIN_PATH_POINTS and
+                        paths.distance(point, self.star) <= STAR_RADIUS):
+                    if self.raw_path[-1] != point:
+                        self.raw_path.append(point)
+                    self.finish_path()
+            elif mode == "HOVER" and point is not None:
                 self.finish_path()
-            elif (mode == "HOVER" and point is not None
-                  and len(self.raw_path) >= MIN_PATH_POINTS):
-                # Two fingers launch anywhere; tracking loss still pauses drawing.
-                # Keep the existing snap assistance for endpoints near the star.
-                if (self.raw_path[-1] != self.star
-                        and paths.distance(self.raw_path[-1], self.star) <= HAND_FINISH_RADIUS):
-                    self.raw_path.append(self.star)
-                self.finish_path()
+            else:
+                # Brief tracking dropouts should not release the route.
+                self.drawing_pause += dt
+                if self.drawing_pause >= DRAWING_PAUSE_TIME:
+                    self.finish_path()
 
         elif self.state == "FLYING":
             self.update_flight(dt)
@@ -177,9 +204,16 @@ class Game:
 
         for cloud in self.clouds:
             cloud["x"] += cloud["vx"] * dt
+            # Keep the whole cloud visible and reverse its direction at an edge.
+            if cloud["x"] < cloud["r"]:
+                cloud["x"] = cloud["r"]
+                cloud["vx"] = abs(cloud["vx"])
+            elif cloud["x"] > self.w - cloud["r"]:
+                cloud["x"] = self.w - cloud["r"]
+                cloud["vx"] = -abs(cloud["vx"])
 
         self.trail.append((self.plane["x"], self.plane["y"]))
-        if len(self.trail) > 60:
+        if len(self.trail) > MAX_TRAIL_POINTS:
             self.trail.pop(0)
 
         position = (self.plane["x"], self.plane["y"])
@@ -203,9 +237,8 @@ class Game:
                 self.timer = 0.0
                 return
 
-        margin = 30
-        if not (-margin <= position[0] <= self.w + margin and
-                -margin <= position[1] <= self.h + margin):
+        if not (-SCREEN_MARGIN <= position[0] <= self.w + SCREEN_MARGIN and
+                -SCREEN_MARGIN <= position[1] <= self.h + SCREEN_MARGIN):
             self.state = "CRASHED"
             self.timer = 0.0
 
