@@ -9,7 +9,6 @@ import random
 
 import paths
 import physics
-import visuals
 
 START_RADIUS = 40        # px: the path must start this close to the plane
 STAR_RADIUS = 28
@@ -22,13 +21,14 @@ MIN_HEIGHT = 480
 
 
 class Game:
-    def __init__(self, w, h):
+    def __init__(self, w, h, *, headless=False):
         if w < MIN_WIDTH or h < MIN_HEIGHT:
             raise ValueError(
                 f"Game requires a frame at least {MIN_WIDTH}x{MIN_HEIGHT} pixels."
             )
         self.w = w
         self.h = h
+        self.headless = headless
         self.level = 1
         self.score = 0
         self.show_autopilot = False
@@ -38,7 +38,9 @@ class Game:
 
     # ---------- Level setup ----------
     def start_level(self):
-        self.sky = visuals.make_sky(self.w, self.h)
+        if not self.headless:
+            import visuals
+            self.sky = visuals.make_sky(self.w, self.h)
         self.pad = (PAD_MARGIN, self.h // 2)
         self.star = (self.w - 120, random.randint(120, self.h - 120))
         # Increase difficulty with each level.
@@ -204,6 +206,8 @@ class Game:
 
     # ---------- Drawing ----------
     def draw(self, frame):
+        import visuals
+
         img = self.sky.copy()
 
         visuals.draw_pad(img, self.pad[0], self.pad[1])

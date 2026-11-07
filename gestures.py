@@ -28,12 +28,14 @@ state = {
 }
 
 
-def get_gesture(landmarks, w, h):
+def get_gesture(landmarks, w, h, tracker_state=None):
     """
     landmarks: list of 21 hand points (x and y from 0 to 1), or None if no hand
     w, h: frame width and height in pixels
     returns: (mode, (x, y)) with (x, y) in integer pixels, or (mode, None)
     """
+    # Desktop callers retain the default tracker; web sessions use their own.
+    state = tracker_state if tracker_state is not None else globals()["state"]
     if landmarks is None:
         state["mode"] = "IDLE"
         state["candidate"] = "IDLE"

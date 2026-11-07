@@ -1,12 +1,5 @@
 const WIDTH = 960;
 const HEIGHT = 600;
-const SPEED = 180;
-const LOOKAHEAD = 60;
-const STEER_GAIN = 4;
-const MAX_TURN = 2.5;
-const MIN_PATH_POINTS = 10;
-const START_RADIUS = 42;
-const STAR_RADIUS = 28;
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const MEDIAPIPE_VERSION = "1.2.2";
 
@@ -23,7 +16,7 @@ const inputButtons = {
 };
 
 const input = { mode: "IDLE", point: null, drawing: false };
-const handState = { mode: "IDLE", candidate: "IDLE", count: 0, smooth: null };
+
 let handLandmarker = null;
 let cameraStream = null;
 let cameraError = "";
@@ -34,236 +27,80 @@ let freeDraw = false;
 let autopilot = false;
 let debug = false;
 
-const game = {
-  level: 1,
-  score: 0,
-  tries: 0,
-  state: "READY",
-  timer: 0,
-  rawPath: [],
-  path: [],
-  trail: [],
-  clouds: [],
-  wind: { x: 0, y: 0 },
-  plane: null,
-  pad: { x: 90, y: HEIGHT / 2 },
-  star: { x: WIDTH - 120, y: HEIGHT / 2 },
-};
+// Python owns all game rules and state. JavaScript captures input and renders snapshots.
+let game = null;
+let session = null;
+let pendingEvents = [];
+let requestInFlight = false;
+let connectionError = "";
 
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-
-function distance(a, b) {
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
-function makeLevel() {
-  game.pad = { x: 90, y: HEIGHT / 2 };
-  game.star = { x: WIDTH - 120, y: randomBetween(140, HEIGHT - 140) };
-  game.wind = game.level < 2
-    ? { x: 0, y: 0 }
-    : { x: randomBetween(-1, 1) * Math.min(24 + game.level * 5, 60), y: randomBetween(-1, 1) * Math.min(12 + game.level * 3, 34) };
-  const count = Math.min(1 + Math.floor((game.level - 1) / 2), 5);
-  game.clouds = [];
-
-  for (let i = 0; i < count; i += 1) {
-    let cloud;
-    for (let attempt = 0; attempt < 100; attempt += 1) {
-      cloud = {
-        x: randomBetween(270, 700),
-        y: randomBetween(90, HEIGHT - 90),
-        r: randomBetween(46, 67),
-        vx: game.level < 3 ? 0 : randomBetween(-10, 10) * Math.min(game.level - 2, 4),
-      };
-      const clearOfEndpoints = distance(cloud, game.pad) > cloud.r + 105 && distance(cloud, game.star) > cloud.r + 90;
-      const clearOfClouds = game.clouds.every((other) => distance(cloud, other) > cloud.r + other.r + 35);
-      if (clearOfEndpoints && clearOfClouds) break;
-    }
-    game.clouds.push(cloud);
+async function api(endpoint, data) {
+  const response = await fetch(`/api/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.headers.get("content-type")?.includes("application/json")) {
+    throw new Error("Start the website with python server.py, then open http://localhost:8000.");
   }
-}
-
-function makePlane() {
-  return { x: game.pad.x, y: game.pad.y, heading: 0, speed: SPEED, index: 0, target: null };
-}
-
-function retry() {
-  game.state = "READY";
-  game.timer = 0;
-  game.rawPath = [];
-  game.path = [];
-  game.trail = [];
-  game.plane = makePlane();
-  game.clouds = game.clouds.map((cloud) => ({ ...cloud }));
-}
-
-function nextLevel() {
-  game.level += 1;
-  makeLevel();
-  retry();
-  setStatus(`Level ${game.level}: draw a route from the drone to the destination.`);
-}
-
-function pathLength(points) {
-  let length = 0;
-  for (let i = 1; i < points.length; i += 1) length += distance(points[i - 1], points[i]);
-  return length;
-}
-
-function chaikin(points, iterations = 2) {
-  let result = points.map((point) => ({ ...point }));
-  for (let iteration = 0; iteration < iterations && result.length > 2; iteration += 1) {
-    const smooth = [result[0]];
-    for (let i = 0; i < result.length - 1; i += 1) {
-      const a = result[i];
-      const b = result[i + 1];
-      smooth.push({ x: 0.75 * a.x + 0.25 * b.x, y: 0.75 * a.y + 0.25 * b.y });
-      smooth.push({ x: 0.25 * a.x + 0.75 * b.x, y: 0.25 * a.y + 0.75 * b.y });
-    }
-    smooth.push(result[result.length - 1]);
-    result = smooth;
-  }
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Python server unavailable.");
   return result;
 }
 
-function resample(points, spacing = 8) {
-  if (points.length < 2) return points.map((point) => ({ ...point }));
-  const result = [{ ...points[0] }];
-  let carry = 0;
-  let previous = { ...points[0] };
-  for (let i = 1; i < points.length; i += 1) {
-    const end = points[i];
-    let segmentLength = distance(previous, end);
-    if (segmentLength < 1e-8) continue;
-    while (carry + segmentLength >= spacing) {
-      const amount = (spacing - carry) / segmentLength;
-      previous = {
-        x: previous.x + amount * (end.x - previous.x),
-        y: previous.y + amount * (end.y - previous.y),
-      };
-      result.push(previous);
-      segmentLength = distance(previous, end);
-      carry = 0;
-    }
-    carry += segmentLength;
-    previous = { ...end };
+function applySnapshot(snapshot) {
+  const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
+  game = snapshot;
+  if (selectedInput === "HAND") Object.assign(input, game.cursor);
+  document.querySelector(".mission-chip strong").textContent = String(game.level).padStart(2, "0");
+  if (changed && !freeDraw) {
+    const messages = {
+      READY: "Draw from the drone to the destination. Release to launch.",
+      DRAWING: "Keep drawing to the destination. Release to launch.",
+      FLYING: "Drone launched. Avoid the storms!",
+      LANDED: "Delivery complete! Next level loading...",
+      CRASHED: "Route failed. Preparing another attempt...",
+      INVALID: "Your route must end at the gold destination. Try again.",
+    };
+    setStatus(messages[game.state]);
   }
-  const last = points[points.length - 1];
-  if (distance(result[result.length - 1], last) > 1) result.push({ ...last });
-  return result;
 }
 
-function tightTurns(points, minRadius) {
-  const tight = Array(points.length).fill(false);
-  for (let i = 1; i < points.length - 1; i += 1) {
-    const a = points[i - 1];
-    const b = points[i];
-    const c = points[i + 1];
-    const ab = distance(a, b);
-    const bc = distance(b, c);
-    const ca = distance(c, a);
-    const cross = Math.abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
-    if (cross > 1e-5 && (ab * bc * ca) / (2 * cross) < minRadius) tight[i] = true;
-  }
-  return tight;
+function failConnection(error) {
+  connectionError = `${error.message} Reload the page to reconnect.`;
+  pendingEvents = [];
+  input.drawing = false;
+  setStatus(connectionError);
+  showToast(connectionError, 15000);
 }
 
-function wrapAngle(angle) {
-  return (angle + Math.PI) % (2 * Math.PI) - Math.PI;
+async function syncGame() {
+  if (!session || requestInFlight || connectionError || !pendingEvents.length) return;
+  requestInFlight = true;
+  const events = pendingEvents;
+  pendingEvents = [];
+  try {
+    const result = await api("update", { session, events });
+    applySnapshot(result.game);
+  } catch (error) {
+    failConnection(error);
+  } finally {
+    requestInFlight = false;
+  }
 }
 
-function stepPlane(dt) {
-  const plane = game.plane;
-  const lastSearch = Math.min(game.path.length - 1, plane.index + 20);
-  let closest = plane.index;
-  for (let i = plane.index + 1; i <= lastSearch; i += 1) {
-    if (distance(plane, game.path[i]) < distance(plane, game.path[closest])) closest = i;
-  }
-  plane.index = closest;
-
-  if (plane.index < game.path.length - 1) {
-    let target = game.path[game.path.length - 1];
-    for (let i = plane.index; i < game.path.length; i += 1) {
-      if (distance(plane, game.path[i]) >= LOOKAHEAD) {
-        target = game.path[i];
-        break;
-      }
-    }
-    plane.target = target;
-    const desired = Math.atan2(target.y - plane.y, target.x - plane.x);
-    const turn = Math.max(-MAX_TURN, Math.min(MAX_TURN, STEER_GAIN * wrapAngle(desired - plane.heading)));
-    plane.heading += turn * dt;
-  } else {
-    plane.target = null;
-  }
-
-  plane.x += (plane.speed * Math.cos(plane.heading) + game.wind.x) * dt;
-  plane.y += (plane.speed * Math.sin(plane.heading) + game.wind.y) * dt;
-}
-
-function startDrawing(point) {
-  if (game.state !== "READY" || !point || distance(point, game.plane) > START_RADIUS) {
-    if (game.state === "READY" && point) setStatus("Start your route near the drone on the launch pad.");
+function queueEvent(event) {
+  if (!session || connectionError) return;
+  if (pendingEvents.length >= 120) {
+    failConnection(new Error("Connection is too slow to keep up with the game."));
     return;
   }
-  game.rawPath = [{ ...point }];
-  game.state = "DRAWING";
-  setStatus("Keep dragging to plan your route. Release to launch.");
+  pendingEvents.push(event);
 }
 
-function finishDrawing() {
-  if (game.rawPath.length < MIN_PATH_POINTS) {
-    game.rawPath = [];
-    game.state = "READY";
-    setStatus("Route too short. Start at the drone and draw a longer route.");
-    return;
-  }
-  game.path = resample(chaikin(game.rawPath));
-  game.tries += 1;
-  game.state = "FLYING";
-  setStatus("Drone launched. Reach the destination without hitting a storm.");
-}
-
-function updateGame(mode, point, dt) {
-  if (game.state === "READY") {
-    if (mode === "DRAW" && point) startDrawing(point);
-  } else if (game.state === "DRAWING") {
-    if (mode === "DRAW" && point) {
-      const previous = game.rawPath[game.rawPath.length - 1];
-      if (distance(previous, point) >= 3) game.rawPath.push({ ...point });
-    } else {
-      finishDrawing();
-    }
-  } else if (game.state === "FLYING") {
-    stepPlane(dt);
-    for (const cloud of game.clouds) cloud.x += cloud.vx * dt;
-    game.trail.push({ x: game.plane.x, y: game.plane.y });
-    if (game.trail.length > 60) game.trail.shift();
-
-    if (distance(game.plane, game.star) <= STAR_RADIUS) {
-      const bonus = Math.max(0, Math.round(300 - pathLength(game.path) * 0.1));
-      game.score += Math.max(100, 1000 - 200 * (game.tries - 1) + bonus);
-      game.state = "LANDED";
-      game.timer = 0;
-      setStatus("Delivery complete! Next level loading…");
-    } else if (
-      game.clouds.some((cloud) => distance(game.plane, cloud) <= cloud.r)
-      || game.plane.x < -25 || game.plane.x > WIDTH + 25
-      || game.plane.y < -25 || game.plane.y > HEIGHT + 25
-    ) {
-      game.state = "CRASHED";
-      game.timer = 0;
-      setStatus("Route failed. You can retry or draw a new route.");
-    }
-  } else if (game.state === "LANDED" || game.state === "CRASHED") {
-    game.timer += dt;
-    if (game.timer >= 2) {
-      if (game.state === "LANDED") nextLevel();
-      else retry();
-    }
-  }
-}
+function retry() { queueEvent({ action: "retry" }); }
+function nextLevel() { queueEvent({ action: "next" }); }
 
 function roundedRect(context, x, y, width, height, radius) {
   context.beginPath();
@@ -330,7 +167,7 @@ function drawStar(x, y) {
   ctx.fillStyle = "#ffc758";
   ctx.beginPath();
   for (let i = 0; i < 10; i += 1) {
-    const radius = i % 2 === 0 ? STAR_RADIUS : STAR_RADIUS * 0.46;
+    const radius = i % 2 === 0 ? game.starRadius : game.starRadius * 0.46;
     const angle = -Math.PI / 2 + i * Math.PI / 5;
     const px = Math.cos(angle) * radius;
     const py = Math.sin(angle) * radius;
@@ -383,8 +220,7 @@ function drawPath(points, color, width = 3, dashed = false) {
 }
 
 function drawRoutePreview() {
-  const preview = resample(chaikin(game.rawPath));
-  const tight = tightTurns(preview, SPEED / MAX_TURN);
+  const { preview, tight } = game;
   for (let i = 1; i < preview.length; i += 1) {
     drawPath([preview[i - 1], preview[i]], tight[i] || tight[i - 1] ? "#e45d53" : "#fff", 4);
   }
@@ -468,7 +304,7 @@ function drawFreeDraw() {
   }
   ctx.fillStyle = "rgba(7,18,29,.48)";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  drawPath(freeInk, "#ff6d68", 8);
+  for (const stroke of freeInk) drawPath(stroke, "#ff6d68", 8);
   ctx.textAlign = "left";
   ctx.fillStyle = "#fff";
   ctx.font = "600 15px 'DM Sans', sans-serif";
@@ -476,8 +312,14 @@ function drawFreeDraw() {
 }
 
 let freeInk = [];
+let activeStroke = null;
 
 function render() {
+  if (!game || connectionError) {
+    drawBackground();
+    drawMessage(connectionError ? "CONNECTION LOST" : "CONNECTING...");
+    return;
+  }
   if (freeDraw) {
     drawFreeDraw();
     return;
@@ -531,6 +373,7 @@ function render() {
     ctx.textAlign = "left";
   } else if (game.state === "LANDED") drawMessage("DELIVERED!");
   else if (game.state === "CRASHED") drawMessage("ROUTE FAILED");
+  else if (game.state === "INVALID") drawMessage("REACH THE DESTINATION");
 
   if (debug) {
     ctx.fillStyle = "#0a1926";
@@ -561,38 +404,14 @@ function canvasPoint(event) {
 function setInputMode(mode) {
   selectedInput = mode;
   input.mode = "IDLE";
+  input.point = null;
+  input.drawing = false;
+  activeStroke = null;
   for (const [key, button] of Object.entries(inputButtons)) {
     const active = (key === "mouse" && mode !== "HAND") || (key === "hand" && mode === "HAND");
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   }
-}
-
-function recognizeHand(landmarks) {
-  if (!landmarks) {
-    handState.candidate = "IDLE";
-    handState.count = 0;
-    handState.mode = "IDLE";
-    handState.smooth = null;
-    return { mode: "IDLE", point: null };
-  }
-  const indexUp = landmarks[8].y < landmarks[6].y;
-  const middleUp = landmarks[12].y < landmarks[10].y;
-  const rawMode = indexUp && !middleUp ? "DRAW" : indexUp && middleUp ? "HOVER" : "IDLE";
-  if (rawMode === handState.candidate) handState.count += 1;
-  else {
-    handState.candidate = rawMode;
-    handState.count = 1;
-  }
-  if (handState.count >= 3) handState.mode = rawMode;
-
-  const rawPoint = { x: (1 - landmarks[8].x) * WIDTH, y: landmarks[8].y * HEIGHT };
-  if (!handState.smooth) handState.smooth = rawPoint;
-  else {
-    handState.smooth.x = 0.4 * rawPoint.x + 0.6 * handState.smooth.x;
-    handState.smooth.y = 0.4 * rawPoint.y + 0.6 * handState.smooth.y;
-  }
-  return { mode: handState.mode, point: { ...handState.smooth } };
 }
 
 async function enableCamera() {
@@ -645,28 +464,36 @@ async function enableHandTracking() {
   }
 }
 
-function updateHandInput() {
-  if (selectedInput !== "HAND" || !handLandmarker || cameraVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+function handLandmarks() {
+  if (!handLandmarker || cameraVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
   const result = handLandmarker.detectForVideo(cameraVideo, performance.now());
-  const landmarks = result.landmarks?.[0] ?? null;
-  const gesture = recognizeHand(landmarks);
-  input.mode = gesture.mode;
-  input.point = gesture.point;
+  return result.landmarks?.[0]?.map(({ x, y }) => ({ x, y })) ?? null;
 }
 
 function frame(now) {
   const dt = Math.min((now - previousFrameTime) / 1000, 0.05);
   previousFrameTime = now;
-  if (selectedInput === "HAND") {
-    updateHandInput();
-    if (freeDraw) {
-      if (input.mode === "DRAW" && input.point) freeInk.push({ ...input.point });
+  if (session && !connectionError) {
+    const event = { dt, paused: freeDraw, mode: input.mode, point: input.point };
+    if (selectedInput === "HAND") {
+      try {
+        event.landmarks = handLandmarks();
+      } catch (error) {
+        setInputMode("MOUSE");
+        showToast(`Hand tracking stopped: ${error.message}`);
+      }
     } else {
-      updateGame(input.mode, input.point, dt);
+      event.mode = input.drawing ? "DRAW" : (input.point ? "HOVER" : "IDLE");
+      input.mode = event.mode;
     }
-  } else {
-    const mode = input.drawing ? "DRAW" : (input.point ? "HOVER" : "IDLE");
-    if (!freeDraw) updateGame(mode, input.point, dt);
+    queueEvent(event);
+    if (freeDraw) {
+      if (input.mode === "DRAW" && input.point) {
+        if (!activeStroke) { activeStroke = []; freeInk.push(activeStroke); }
+        activeStroke.push({ ...input.point });
+      } else activeStroke = null;
+    }
+    syncGame();
   }
   render();
   requestAnimationFrame(frame);
@@ -698,12 +525,12 @@ canvas.addEventListener("pointercancel", () => {
 
 inputButtons.mouse.addEventListener("click", () => {
   setInputMode("MOUSE");
-  handState.mode = "IDLE";
   setStatus("Drag from the drone to draw a route. Release to launch.");
 });
 inputButtons.hand.addEventListener("click", enableHandTracking);
 document.querySelector("#free-draw").addEventListener("click", (event) => {
   freeDraw = !freeDraw;
+  activeStroke = null;
   event.currentTarget.classList.toggle("active", freeDraw);
   setStatus(freeDraw ? "Free draw: drag anywhere to sketch. Press C to clear." : "Drag from the drone to draw a route. Release to launch.");
 });
@@ -713,7 +540,8 @@ document.querySelector("#autopilot").addEventListener("click", (event) => {
 });
 document.querySelector("#clear").addEventListener("click", () => {
   freeInk = [];
-  if (!freeDraw && game.state !== "FLYING") retry();
+  activeStroke = null;
+  if (!freeDraw && game?.state !== "FLYING") retry();
 });
 document.querySelector("#fullscreen").addEventListener("click", async () => {
   try {
@@ -722,13 +550,6 @@ document.querySelector("#fullscreen").addEventListener("click", async () => {
   } catch (error) {
     showToast(`Could not enter fullscreen: ${error.message}`);
   }
-});
-
-canvas.addEventListener("pointermove", (event) => {
-  if (freeDraw && input.drawing) freeInk.push(canvasPoint(event));
-});
-canvas.addEventListener("pointerdown", (event) => {
-  if (freeDraw) freeInk = [canvasPoint(event)];
 });
 
 window.addEventListener("keydown", (event) => {
@@ -740,12 +561,16 @@ window.addEventListener("keydown", (event) => {
   else if (key === "v") document.querySelector("#autopilot").click();
   else if (key === "c") {
     freeInk = [];
-    if (!freeDraw && game.state !== "FLYING") retry();
+    activeStroke = null;
+    if (!freeDraw && game?.state !== "FLYING") retry();
   } else if (key === "d") debug = !debug;
   else if (key === "f") document.querySelector("#fullscreen").click();
   else if (key === "m") inputButtons.mouse.click();
 });
 
-makeLevel();
-retry();
+setStatus("Connecting to the Python game engine...");
+api("session", {}).then((result) => {
+  session = result.session;
+  applySnapshot(result.game);
+}).catch(failConnection);
 requestAnimationFrame(frame);
