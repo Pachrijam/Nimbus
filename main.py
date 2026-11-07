@@ -3,6 +3,7 @@ from pathlib import Path
 import time
 
 import cv2
+import numpy as np
 
 import freedraw
 import game
@@ -25,14 +26,7 @@ def _mouse_callback(event, x, y, flags, state):
 
 def main():
     """Run the camera, gesture-recognition, and game-rendering loop."""
-    camera = cv2.VideoCapture(0)
-    if not camera.isOpened():
-        camera.release()
-        raise RuntimeError("Could not open the webcam. Check that it is connected and available.")
-
-    camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
-    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
-
+    camera = None
     landmarker = None
     try:
         if MODEL_PATH.is_file():
@@ -60,12 +54,7 @@ def main():
         previous_time = time.monotonic()
         previous_timestamp_ms = 0
 
-        success, frame = camera.read()
-        if not success:
-            raise RuntimeError("Could not read a frame from the webcam.")
-
-        frame = cv2.flip(frame, 1)
-        height, width = frame.shape[:2]
+        width, height = CAM_WIDTH, CAM_HEIGHT
         flight_game = game.Game(width, height)
         free_draw = freedraw.FreeDraw(width, height)
 
@@ -73,11 +62,21 @@ def main():
         cv2.setMouseCallback(WINDOW_NAME, _mouse_callback, mouse_state)
 
         while True:
-            success, frame = camera.read()
-            if not success:
-                raise RuntimeError("Lost the webcam while the application was running.")
-
-            frame = cv2.flip(frame, 1)
+            if mouse_mode:
+                frame = np.zeros((height, width, 3), dtype=np.uint8)
+            else:
+                if camera is None:
+                    camera = cv2.VideoCapture(0)
+                    camera.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+                success, frame = camera.read()
+                if not success:
+                    camera.release()
+                    camera = None
+                    mouse_mode = True
+                    print("Webcam unavailable; switching to mouse mode.")
+                    continue
+                frame = cv2.resize(cv2.flip(frame, 1), (width, height))
             now = time.monotonic()
             dt = min(now - previous_time, 0.05)
             previous_time = now
@@ -127,6 +126,11 @@ def main():
                     print("Hand tracking is unavailable; mouse mode remains enabled.")
                 else:
                     mouse_mode = not mouse_mode
+                if mouse_mode and camera is not None:
+                    camera.release()
+                    camera = None
+                mouse_state.update(point=None, drawing=False)
+                gestures.get_gesture(None, width, height)
             elif key == ord("f"):
                 fullscreen = not fullscreen
                 cv2.setWindowProperty(
@@ -149,7 +153,8 @@ def main():
             if landmarker is not None:
                 landmarker.close()
         finally:
-            camera.release()
+            if camera is not None:
+                camera.release()
             cv2.destroyAllWindows()
 
 
