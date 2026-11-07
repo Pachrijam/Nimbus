@@ -1,4 +1,4 @@
-"""Application entry point for the AirCanvas flight-path game."""
+"""Application entry point for the Nimbus flight-path game."""
 from pathlib import Path
 import time
 
@@ -11,7 +11,7 @@ import gestures
 
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
-WINDOW_NAME = "AirCanvas: Flight Path"
+WINDOW_NAME = "Nimbus: Flight Path"
 MODEL_PATH = Path(__file__).with_name("hand_landmarker.task")
 
 
