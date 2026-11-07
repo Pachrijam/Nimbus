@@ -53,7 +53,7 @@ class Session:
                 gestures.reset_gesture(self.gesture)
             self.cursor = mode, position
             if not event["paused"]:
-                self.game.update(mode, position, event["dt"])
+                self.game.update(mode, position, event["dt"], gesture_input="landmarks" in event)
                 if len(self.game.raw_path) > 4096:
                     self.game.retry()
 

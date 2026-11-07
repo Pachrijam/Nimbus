@@ -126,7 +126,7 @@ class Game:
         self.start_level()
 
     # ---------- Per-frame update ----------
-    def update(self, mode, point, dt):
+    def update(self, mode, point, dt, *, gesture_input=False):
         self.cursor_mode = mode
         self.cursor_point = point
 
@@ -140,7 +140,13 @@ class Game:
             if mode == "DRAW" and point is not None:
                 if paths.distance(point, self.raw_path[-1]) >= 3:
                     self.raw_path.append(point)
-            else:
+            elif not gesture_input:
+                self.finish_path()
+            elif (mode == "HOVER" and point is not None
+                  and len(self.raw_path) >= MIN_PATH_POINTS
+                  and paths.distance(self.raw_path[-1], self.star) <= STAR_RADIUS):
+                # A lost/uncertain hand pauses the route. Even two fingers should
+                # preserve an unfinished route so the user can resume drawing.
                 self.finish_path()
 
         elif self.state == "FLYING":

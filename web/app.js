@@ -61,8 +61,12 @@ function applySnapshot(snapshot) {
   document.querySelector(".mission-chip strong").textContent = String(game.level).padStart(2, "0");
   if (changed && !freeDraw) {
     const messages = {
-      READY: "Draw from the drone to the destination. Release to launch.",
-      DRAWING: "Keep drawing to the destination. Release to launch.",
+      READY: selectedInput === "HAND"
+        ? "Draw from the drone to the gold destination with one finger, then hold up two fingers to launch."
+        : "Draw from the drone to the destination. Release to launch.",
+      DRAWING: selectedInput === "HAND"
+        ? "Keep drawing to the gold destination, then hold up two fingers to launch. Tracking gaps pause your route."
+        : "Keep drawing to the destination. Release to launch.",
       FLYING: "Drone launched. Avoid the storms!",
       LANDED: "Delivery complete! Next level loading...",
       CRASHED: "Route failed. Preparing another attempt...",
@@ -493,7 +497,7 @@ async function enableHandTracking() {
     handTrackingStarting = false;
     cameraError = "";
     setInputMode("HAND");
-    setStatus("Hand tracking is on. Raise one finger to draw; raise two to release.");
+    setStatus("Draw to the gold destination with one finger, then hold up two fingers to launch. Tracking gaps pause your route.");
   } catch (error) {
     if (request !== cameraRequest) return;
     cameraError = error instanceof Error ? error.message : String(error);
