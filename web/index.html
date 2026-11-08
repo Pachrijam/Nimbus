@@ -28,8 +28,11 @@
       <section class="game-panel" aria-label="Nimbus game">
         <div class="toolbar">
           <div class="toolbar-group input-controls" aria-label="Hand tracking">
-            <button class="tool-button start-game-button" id="camera-mode" type="button" aria-pressed="false">
-              <span aria-hidden="true">▶</span> Start
+            <button class="tool-button start-game-button" id="camera-mode" type="button" aria-pressed="false" title="Start hand tracking (S)" aria-keyshortcuts="s">
+              <span aria-hidden="true">▶</span> Start <kbd>S</kbd>
+            </button>
+            <button class="tool-button stop-camera-button" id="camera-stop" type="button" title="Stop camera and hand tracking (X)" aria-keyshortcuts="x">
+              <span aria-hidden="true">■</span> Stop <kbd>X</kbd>
             </button>
           </div>
           <div class="toolbar-group">
@@ -44,9 +47,9 @@
         <div class="canvas-wrap" id="canvas-wrap">
           <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
           <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two or more fingers to launch."></canvas>
-          <div class="camera-preview hidden" id="camera-preview" aria-label="Mirrored webcam preview">
-            <video id="camera-video" autoplay playsinline muted></video>
-            <span class="camera-label"><span class="live-dot"></span> CAMERA</span>
+          <div class="camera-preview hidden" id="camera-preview" tabindex="0" role="group" aria-label="Camera preview. Drag to move, or use arrow keys when focused." title="Drag to move the camera preview">
+            <video id="camera-video" autoplay playsinline muted draggable="false"></video>
+            <span class="camera-label"><span class="live-dot"></span> CAMERA · DRAG</span>
           </div>
           <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
         </div>

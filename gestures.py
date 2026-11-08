@@ -31,10 +31,11 @@ PINKY_PIP = 18
 PINKY_TIP = 20
 
 # 1. Active zone: this part of the camera image (0..1) covers the whole screen
-ZONE_LEFT = 0.20
-ZONE_RIGHT = 0.80
-ZONE_TOP = 0.15
-ZONE_BOTTOM = 0.75
+# A wider active zone reduces cursor sensitivity without adding smoothing lag.
+ZONE_LEFT = 0.15
+ZONE_RIGHT = 0.85
+ZONE_TOP = 0.10
+ZONE_BOTTOM = 0.80
 
 # 2. Finger-up thresholds: tip distance / knuckle distance (from the wrist)
 INDEX_UP_RATIO = 1.10     # index counts as up above this

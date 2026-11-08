@@ -3,9 +3,11 @@ import { createHandTracking } from "./camera.js";
 import { createControls } from "./controls.js";
 import { createRenderer } from "./renderer.js";
 import { createUI } from "./ui.js";
+import { createDraggablePreview } from "./camera-preview.js";
 
 const canvas = document.querySelector("#game-canvas");
 const cameraVideo = document.querySelector("#camera-video");
+createDraggablePreview(document.querySelector("#camera-preview"), canvas);
 
 // Python owns game rules and snapshots; this state holds the browser's view and input.
 const state = {

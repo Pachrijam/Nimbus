@@ -89,7 +89,8 @@ class EngineTests(unittest.TestCase):
         hand[8]["y"] = 0.5
         first.update(validate_events([event(landmarks=hand, paused=True)] * 3))
         self.assertEqual(first.cursor[0], "DRAW")
-        self.assertAlmostEqual(first.cursor[1][0], 96, delta=1)
+        # Mirrored x=0.26 maps to about 151px with the gentler 0.15..0.85 zone.
+        self.assertAlmostEqual(first.cursor[1][0], 150.86, delta=1)
         self.assertEqual(first.game.state, "READY")
         self.assertEqual(second.cursor, ("IDLE", None))
         first.update(validate_events([event(landmarks=None)]))

@@ -23,6 +23,11 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
   }
 
   handButton.addEventListener("click", () => camera.enableHandTracking());
+  function stopTracking() {
+    setInputMode("OFF");
+    setStatus("Camera stopped. Select Start or press S to resume hand tracking.");
+  }
+  document.querySelector("#camera-stop").addEventListener("click", stopTracking);
   function setFreeDraw(enabled) {
     state.freeDraw = enabled;
     state.activeStroke = null;
@@ -63,9 +68,13 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
   });
 
   window.addEventListener("keydown", (event) => {
-    if (event.repeat) return;
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target;
+    if (target?.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName)) return;
     const key = event.key.toLowerCase();
-    if (key === "r") retry();
+    if (key === "s") { event.preventDefault(); camera.enableHandTracking(); }
+    else if (key === "x") { event.preventDefault(); stopTracking(); }
+    else if (key === "r") retry();
     else if (key === "n") nextLevel();
     else if (key === "p") document.querySelector("#free-draw").click();
     else if (key === "escape" && state.freeDraw) setFreeDraw(false);
