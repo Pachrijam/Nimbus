@@ -1,5 +1,6 @@
 import { WIDTH, HEIGHT } from "./config.js";
 import { createGeminiReplay } from "./replay.js";
+import { updateCanvasResolution } from "./canvas-resolution.js";
 
 export function createRenderer({ canvas, cameraVideo }) {
   const ctx = canvas.getContext("2d");
@@ -344,6 +345,7 @@ export function createRenderer({ canvas, cameraVideo }) {
   }
 
   function render(state, cameraActive, now = performance.now()) {
+    updateCanvasResolution(canvas, ctx, window.devicePixelRatio || 1);
     const { game, input, connectionError, freeDraw, freeInk, autopilot, debug } = state;
     const replay = geminiReplay.frame(state, now);
     if (!game || connectionError) {
