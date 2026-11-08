@@ -1,43 +1,32 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#081321">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nimbus</title>
-    <link rel="icon" type="image/png" href="./images/favicon.png">
-    <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="app-shell">
+    <div class="app-shell">
       <header class="topbar">
-        <a class="brand" href="./" aria-label="Nimbus home">
-          Nimbus
-        </a>
-        <div class="topbar-note"><span class="status-dot"></span> Camera images stay in this browser</div>
+        <div>
+          <p class="eyebrow">Mission control</p>
+          <h1 id="page-title">Draw a path. <span>Challenge Gemini.</span></h1>
+        </div>
+        <div class="header-actions">
+          <button id="camera-mode" class="tool-button" type="button" aria-pressed="false">Start</button>
+          <button id="fullscreen" class="tool-button" type="button">Fullscreen</button>
+          <button id="free-draw" class="tool-button" type="button" aria-pressed="false" title="Toggle free draw (P)">Free draw</button>
+        </div>
       </header>
 
-      <section class="intro" aria-labelledby="page-title">
-        <div>
-          <p class="eyebrow">A route-planning simulator</p>
-          <h1 id="page-title">Draw a path. <span>Challenge Gemini.</span></h1>
-          <p class="intro-copy">Draw in the air, dodge the storm clouds, and reach the goal! Compare your flight against Gemini's most optimal route. Can you beat the AI?</p>
-        </div>
-      </section>
-
-      <section class="game-panel" aria-label="Nimbus game">
-        <div class="toolbar">
-          <div class="toolbar-group input-controls" aria-label="Hand tracking">
-            <button class="tool-button start-game-button" id="camera-mode" type="button" aria-pressed="false">
-              <span aria-hidden="true">▶</span> Start
-            </button>
+      <main class="game-panel">
+        <div class="meta-row">
+          <div class="status-panel">
+            <p id="status-text">Connecting to the Python game engine...</p>
           </div>
-          <div class="toolbar-group">
-            <button class="icon-button" id="free-draw" type="button" title="Toggle free draw (P)" aria-label="Toggle free draw" aria-pressed="false">✎</button>
-            <button class="icon-button" id="autopilot" type="button" title="Toggle autopilot view (V)" aria-label="Toggle autopilot view">⌁</button>
-            <button class="icon-button" id="clear" type="button" title="Clear drawing (C)" aria-label="Clear drawing">↺</button>
-            <span class="toolbar-divider" aria-hidden="true"></span>
-            <button class="icon-button" id="fullscreen" type="button" title="Toggle fullscreen (F)" aria-label="Toggle fullscreen">⛶</button>
+          <div class="quick-controls" aria-live="polite">
+            <kbd>R</kbd><span>Retry</span><kbd>N</kbd><span>Next level</span><kbd>P</kbd><span>Free draw</span>
           </div>
         </div>
 
@@ -53,63 +42,14 @@
           <button class="tool-button" id="undo-drawing" type="button" title="Undo stroke (U)" disabled>Undo</button>
           <span class="drawing-hint">One finger draws · Two fingers change color</span>
         </div>
+
         <div class="canvas-wrap" id="canvas-wrap">
           <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
           <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two or more fingers to launch."></canvas>
-          <div class="camera-preview hidden" id="camera-preview" aria-label="Mirrored webcam preview">
-            <video id="camera-video" autoplay playsinline muted></video>
-            <span class="camera-label"><span class="live-dot"></span> CAMERA</span>
-          </div>
-          <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
         </div>
+      </main>
+    </div>
 
-        <section class="comparison hidden" id="comparison" aria-labelledby="comparison-title">
-          <div class="comparison-heading">
-            <div>
-              <p class="eyebrow">Delivery complete</p>
-              <h2 id="comparison-title">Your flight vs. Gemini</h2>
-            </div>
-            <span class="match-badge" id="match-badge">Planning...</span>
-          </div>
-          <p id="comparison-message" class="comparison-message" role="status" aria-live="polite"></p>
-          <dl class="comparison-metrics">
-            <div><dt>Your flight</dt><dd id="player-time">—</dd></div>
-            <div id="ai-time-metric"><dt>Gemini's flight</dt><dd id="ai-time">—</dd></div>
-            <div id="ai-performance-metric"><dt>AI performance</dt><dd id="match-percent">—</dd></div>
-            <div><dt>Your best this level</dt><dd id="best-time">—</dd></div>
-          </dl>
-          <p class="route-legend" id="route-legend"><span class="player-line" aria-hidden="true"></span> Your flight <span class="ai-line" aria-hidden="true"></span> Gemini's flight (dashed)</p>
-          <p class="comparison-note" id="comparison-note">Gemini's routes are tested with the same wind, moving storms, and flight physics.</p>
-          <div class="comparison-actions">
-            <button class="tool-button" id="gemini-replay" type="button" disabled>Replay Gemini's flight</button>
-            <button class="tool-button active" id="challenge-retry" type="button"><span id="retry-label">Try to beat Gemini</span> <kbd>R</kbd></button>
-            <button class="tool-button" id="challenge-next" type="button">Next level <kbd>N</kbd></button>
-          </div>
-        </section>
-
-        <div class="panel-footer">
-          <p class="status-text" id="status-text" role="status">Select Start to draw with your camera.</p>
-          <div class="quick-controls"><kbd>R</kbd><span>Retry</span><kbd>N</kbd><span>Next level</span><kbd>P</kbd><span>Free draw</span></div>
-        </div>
-      </section>
-
-      <section class="how-to" aria-label="How to play">
-        <article class="step-card">
-          <span class="step-number">01</span>
-          <div><h2>Start at the drone</h2><p>Select Start and allow camera access. Raise your index finger and place the cursor directly over the drone to begin drawing.</p></div>
-        </article>
-        <article class="step-card">
-          <span class="step-number">02</span>
-          <div><h2>Plan around storms</h2><p>Clouds are no-fly zones. A smooth route gives your drone room to turn.</p></div>
-        </article>
-        <article class="step-card">
-          <span class="step-number">03</span>
-          <div><h2>Deliver, then challenge Gemini</h2><p>Hold up two or more fingers to launch. After delivery, compare flight times and routes. Retry the same mission to match or beat Gemini, or choose the next level.</p></div>
-        </article>
-      </section>
-
-      <footer class="page-footer">Nimbus <span>·</span> Built for HackRPI 2026</footer>
-    </main>
-    <script type="module" src="./src/app.js"></script>
+    <script type="module" src="src/app.js"></script>
   </body>
 </html>

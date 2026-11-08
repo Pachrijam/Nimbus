@@ -20,7 +20,6 @@ export function createFreeDraw(state) {
   function update() {
     if (!state.freeDraw) return;
     const { mode, point } = state.input;
-    // One color change per raised-hand gesture, including a held peace sign.
     if (mode === "HOVER" && previousMode !== "HOVER") {
       const index = PEN_COLORS.findIndex(color => color.value === state.penColor);
       state.penColor = PEN_COLORS[(index + 1) % PEN_COLORS.length].value;
@@ -36,14 +35,12 @@ export function createFreeDraw(state) {
     }
     const points = state.activeStroke.points;
     const last = points.at(-1);
-    // A stationary hand should not grow the drawing on every refresh.
     if (!last || Math.hypot(point.x - last.x, point.y - last.y) >= 1) points.push({ ...point });
   }
 
   return {
     update,
     endStroke,
-    // Tool changes lift the pen without re-triggering a held color gesture.
     clear() { state.freeInk = []; state.activeStroke = null; },
     undo() { state.freeInk.pop(); state.activeStroke = null; },
     setColor(color) { state.penColor = color; state.activeStroke = null; },

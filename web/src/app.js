@@ -7,7 +7,6 @@ import { createUI } from "./ui.js";
 const canvas = document.querySelector("#game-canvas");
 const cameraVideo = document.querySelector("#camera-video");
 
-// Python owns game rules and snapshots; this state holds the browser's view and input.
 const state = {
   game: null,
   connectionError: "",
@@ -64,7 +63,6 @@ function frame(now) {
   const dt = Math.min((now - previousFrameTime) / 1000, 0.05);
   previousFrameTime = now;
   if (client.connected) {
-    // Always send hand input, including null while the camera is off or unavailable.
     const event = { dt, paused: state.freeDraw, landmarks: null, cameraAspect: camera.aspectRatio };
     if (state.selectedInput === "HAND") {
       try {

@@ -109,8 +109,7 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
   });
 
   window.addEventListener("keydown", (event) => {
-    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey
-      || event.target.closest?.("input, select, textarea, [contenteditable=true]")) return;
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.("input, select, textarea, [contenteditable=true]")) return;
     const key = event.key.toLowerCase();
     if (key === "r") retry();
     else if (key === "n") nextLevel();
