@@ -11,7 +11,7 @@ export function createGeminiReplay() {
       const game = state.game;
       const result = game?.comparison;
       if (!["LANDED", "CRASHED"].includes(game?.state)
-          || result?.status !== "ready" || result.aiTrajectory.length < 2) {
+          || result?.status !== "ready" || !result.aiTrajectory || result.aiTrajectory.length < 2) {
         key = null;
         previousTime = null;
         return null;
@@ -20,7 +20,9 @@ export function createGeminiReplay() {
         previousTime = null;
         return null;
       }
-      const nextKey = `${game.level}:${game.tries}:${state.geminiReplay ?? 0}`;
+      // A faster route can arrive while Gemini is still planning. Start that
+      // trajectory and its cloud clock together instead of jumping mid-flight.
+      const nextKey = `${game.level}:${game.tries}:${state.geminiReplay ?? 0}:${result.planner}:${result.aiTime}:${result.aiTrajectory.length}`;
       if (nextKey !== key) {
         key = nextKey;
         elapsed = 0;

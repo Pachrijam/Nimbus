@@ -22,8 +22,13 @@ export function createUI({ canvas, statusText, toast }) {
     write("best-time", Number.isFinite(result.bestTime) ? `${result.bestTime.toFixed(2)} s` : "—");
     const ready = result.status === "ready";
     const disabled = result.status === "disabled";
+    const local = result.planner === "local";
+    const pilot = local ? "Route planner" : "Gemini";
+    write("ai-time-label", local ? "Verified flight" : "Gemini's flight");
+    write("ai-route-label", local ? "Verified route (dashed)" : "Gemini's flight (dashed)");
+    write("gemini-replay", local ? "Replay verified flight" : "Replay Gemini's flight");
     let title = crashed ? "Your route vs. Gemini's safe route" : disabled ? "Delivery complete" : "Your flight vs. Gemini";
-    write("retry-label", crashed ? "Try another route" : disabled ? "Retry this level" : "Try to beat Gemini");
+    write("retry-label", crashed ? "Try another route" : disabled ? "Retry this level" : local ? "Beat the verified route" : "Try to beat Gemini");
     for (const id of ["ai-time-metric", "time-gap-metric", "route-legend", "gemini-replay"]) {
       document.querySelector(`#${id}`).classList.toggle("hidden", disabled);
     }
@@ -33,15 +38,15 @@ export function createUI({ canvas, statusText, toast }) {
     const gap = ready && !crashed ? Math.abs(result.timeDelta).toFixed(2) : null;
     const tied = ready && !crashed && gap === "0.00";
     write("time-gap", gap === null ? "—" : `${gap} s`);
-    const badges = { beat: "You win!", matched: "Nearly tied", chasing: "Gemini wins" };
+    const badges = { beat: "You win!", matched: "Nearly tied", chasing: `${pilot} wins` };
     write("match-badge", crashed
       ? ready ? "Safe route found" : result.status === "pending" ? "Planning..." : "AI unavailable"
       : ready ? tied ? "Tied" : badges[result.verdict]
         : result.status === "pending" ? "Planning..." : disabled ? "Delivered!" : "AI unavailable");
     let message = result.message;
     if (crashed && ready) {
-      title = "Gemini found a safe route.";
-      message = `Your route hit a cloud. Gemini's verified route reached the destination in ${result.aiTime.toFixed(2)} s.`;
+      title = local ? "Safe route found. Watch the purple drone." : "Gemini found a safe route.";
+      message = `The fastest verified route reached the destination in ${result.aiTime.toFixed(2)} s. The full path is shown in purple.`;
     } else if (crashed && result.status === "pending") {
       title = "Your route hit a cloud. Gemini is searching...";
       message = "A safe route will appear here if Gemini finds one in the same conditions.";
@@ -50,18 +55,19 @@ export function createUI({ canvas, statusText, toast }) {
       message = result.message || "Try another route through the same level.";
     } else if (ready) {
       title = tied
-        ? "You and Gemini finished in the same time!"
+        ? `You and ${pilot} finished in the same time!`
         : result.timeDelta < 0
-          ? `You beat Gemini by ${gap} seconds!`
-          : `Gemini finished ${gap} seconds ahead`;
+          ? `You beat ${pilot} by ${gap} seconds!`
+          : `${pilot} finished ${gap} seconds ahead`;
       message = result.timeDelta < 0 && !tied
         ? "Lower time wins. Can you improve your record?"
-        : `Lower time wins. Finish under ${result.aiTime.toFixed(2)} s to beat Gemini.`;
+        : `Lower time wins. Finish under ${result.aiTime.toFixed(2)} s to beat ${pilot}.`;
     }
+    if (ready && result.planning) message += " Gemini is checking for a faster route.";
     write("comparison-title", title);
     write("comparison-message", message);
     const planner = result.planner === "gemini_predictive"
-      ? "Gemini + predictive cloud planning. " : "";
+      ? "Gemini + predictive cloud planning. " : local ? "Local simulator route. " : "";
     write("comparison-note", ready
       ? `${planner}Best of ${result.tested} simulated routes (${result.refined ?? 0} time-aware refinements), not a guaranteed optimum. Both flights use the same wind, moving storms, and flight physics.`
       : disabled
@@ -69,7 +75,7 @@ export function createUI({ canvas, statusText, toast }) {
         : crashed
           ? "Gemini's routes use the same wind, moving storms, and flight physics. Retry or continue when ready."
           : "Gemini's routes are tested with the same wind, moving storms, and flight physics. Your delivery is saved for this level.");
-    comparisonPanel.setAttribute("aria-busy", String(result.status === "pending"));
+    comparisonPanel.setAttribute("aria-busy", String(result.status === "pending" || Boolean(result.planning)));
   }
 
   function setStatus(message) {
@@ -86,17 +92,20 @@ export function createUI({ canvas, statusText, toast }) {
   function applySnapshot(state, snapshot, acceptInput = true) {
     const { game, selectedInput, input, freeDraw } = state;
     const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
+    const comparisonChanged = game?.comparison?.status !== snapshot.comparison?.status
+      || game?.comparison?.planning !== snapshot.comparison?.planning
+      || game?.comparison?.planner !== snapshot.comparison?.planner;
     state.game = snapshot;
     missionHUD.update(snapshot, freeDraw);
     updateComparison(snapshot.comparison, Boolean(snapshot.comparison) && !freeDraw);
     if (!freeDraw && snapshot.comparison?.status === "ready" && (changed || game?.comparison?.status !== "ready")) {
-      showToast("Watch Gemini's purple drone fly its route. Your flight stays orange.", 5000);
+      showToast("The verified route is shown in purple. Watch the drone fly to the destination.", 5000);
     }
     if (selectedInput === "HAND" && acceptInput) Object.assign(input, snapshot.cursor);
     canvas.setAttribute("aria-label", freeDraw
       ? "Free draw canvas. One finger draws; two or more fingers change color."
       : `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two or more fingers to launch.`);
-    if (changed && !freeDraw) {
+    if ((changed || comparisonChanged) && !freeDraw) {
       if (selectedInput !== "HAND" && !["LANDED", "CRASHED"].includes(snapshot.state)) {
         setStatus("Select Start to draw with your camera.");
         return;
@@ -108,7 +117,11 @@ export function createUI({ canvas, statusText, toast }) {
         LANDED: snapshot.comparison?.status === "disabled"
           ? "Delivered! R to retry this level, N to continue."
           : "Delivery complete! Compare with Gemini below. R to retry this level, N to continue.",
-        CRASHED: snapshot.comparison?.status === "disabled"
+        CRASHED: snapshot.comparison?.status === "ready"
+          ? snapshot.comparison.planning
+            ? "Safe route shown in purple. Gemini is checking for a faster route. R to retry."
+            : "Safe route shown in purple. Replay below, or press R to try another route."
+          : snapshot.comparison?.status === "disabled"
           ? "Route failed. AI comparison is off. Draw another route with R."
           : "Route failed. Gemini is searching for a safe route. Compare below, or press R to retry.",
       };

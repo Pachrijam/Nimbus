@@ -41,6 +41,9 @@ class GeminiTests(unittest.TestCase):
         for _ in range(2000):
             flight.update("IDLE", None, frame_dt)
             if flight.state != "FLYING":
+                job = flight.benchmark_job
+                if not os.environ.get("GEMINI_API_KEY") and isinstance(job.done, threading.Event):
+                    self.assertTrue(job.done.wait(5))
                 return
         self.fail("Flight never ended")
 
@@ -158,17 +161,20 @@ class GeminiTests(unittest.TestCase):
         self.assertNotIn("time", result)
         self.assertNotIn("You delivered", result["message"])
 
-    def test_missing_key_does_not_make_a_request(self):
+    def test_missing_key_displays_local_verified_route_without_a_request(self):
         with patch("gemini_agent.urlopen") as request:
             job = gemini_agent.BenchmarkJob(self.layout)
-        self.assertTrue(job.done.is_set())
-        self.assertEqual(job.result["status"], "disabled")
+            self.assertTrue(job.done.wait(5))
+        self.assertEqual(job.result["status"], "ready")
+        self.assertEqual(job.result["planner"], "local")
+        self.assertFalse(job.result["planning"])
+        self.assertEqual(flight_sim.simulate(job.result["route"], self.layout)["state"], "LANDED")
         request.assert_not_called()
 
     def test_worker_does_not_block_game_or_attach_to_a_later_level(self):
         entered, release = threading.Event(), threading.Event()
 
-        def build(*args):
+        def build(*args, **kwargs):
             entered.set()
             release.wait(3)
             return {"status": "unavailable", "message": "test result"}
@@ -178,7 +184,10 @@ class GeminiTests(unittest.TestCase):
                 self.fly(self.flight)
                 self.assertTrue(entered.wait(1))
                 old_job = self.flight.benchmark_job
-                self.assertEqual(self.flight.comparison()["status"], "pending")
+                result = self.flight.comparison()
+                self.assertEqual(result["status"], "ready")
+                self.assertTrue(result["planning"])
+                self.assertGreater(len(result["aiTrajectory"]), 2)
                 self.flight.next_level()
                 self.assertIsNone(self.flight.benchmark_job)
                 release.set()
@@ -247,6 +256,7 @@ class GeminiTests(unittest.TestCase):
     def test_crash_starts_safe_route_search_and_waits_for_player_action(self):
         with patch("gemini_agent.BenchmarkJob") as job:
             job.return_value.done.is_set.return_value = False
+            job.return_value.result = {"status": "pending"}
             self.fly(self.flight, DIRECT_ROUTE)
             self.assertEqual(self.flight.state, "CRASHED")
             job.assert_called_once_with(self.flight.level_layout())
@@ -303,6 +313,53 @@ class GeminiTests(unittest.TestCase):
         self.assertNotIn("verdict", result)
         self.flight.retry()
         self.assertIs(self.flight.benchmark_job, job)
+
+    def test_crash_route_is_visible_while_provider_waits_and_survives_failure(self):
+        entered, release = threading.Event(), threading.Event()
+
+        def request(*args):
+            entered.set()
+            release.wait(5)
+            raise gemini_agent.AgentError("offline")
+
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}), patch(
+                "gemini_agent.request_routes", side_effect=request):
+            try:
+                self.fly(self.flight, DIRECT_ROUTE)
+                self.assertTrue(entered.wait(3))
+                job = self.flight.benchmark_job
+                self.assertFalse(job.done.is_set())
+                session = Session()
+                session.game = self.flight
+                result = session.snapshot()["comparison"]
+                self.assertEqual(result["status"], "ready")
+                self.assertTrue(result["planning"])
+                self.assertEqual(result["planner"], "local")
+                self.assertGreater(len(result["aiTrajectory"]), 2)
+                verified = flight_sim.simulate(job.result["route"], self.layout)
+                self.assertEqual(verified["state"], "LANDED")
+                release.set()
+                self.assertTrue(job.done.wait(3))
+                final = self.flight.comparison()
+                self.assertEqual(final["aiTrajectory"], result["aiTrajectory"])
+                self.assertFalse(final["planning"])
+            finally:
+                release.set()
+
+    def test_faster_gemini_route_replaces_visible_baseline(self):
+        layout = {**self.layout, "clouds": []}
+        slow = flight_sim.simulate(gemini_agent.validate_route(SAFE_ROUTE, layout), layout)
+        initial = {"status": "ready", "planner": "local", "model": None, "tested": 1,
+                   "refined": 0, "route": gemini_agent.validate_route(SAFE_ROUTE, layout), **slow}
+        updates = []
+        with patch("gemini_agent.request_routes", return_value=[DIRECT_ROUTE]):
+            result = gemini_agent.build_benchmark(layout, "key", "gemini-test",
+                                                  initial=initial, on_result=updates.append)
+        self.assertTrue(updates)
+        self.assertTrue(updates[0]["planning"])
+        self.assertLess(result["time"], initial["time"])
+        self.assertEqual(result["planner"], "gemini")
+        self.assertFalse(result["planning"])
 
 
 if __name__ == "__main__":

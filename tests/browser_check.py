@@ -31,16 +31,33 @@ def main():
             if session.game.state != "FLYING":
                 break
             session.game.update("IDLE", None, .02)
+        assert session.game.benchmark_job.done.wait(5)
         with patch("gemini_agent.request_routes", return_value=[route]):
             session.game.benchmark_job.result = gemini_agent.build_benchmark(
                 session.game.level_layout(), "mock", "gemini-test")
         snapshot = session.snapshot()
+
+        crashed_session = Session()
+        crashed_session.game.path = gemini_agent.validate_route({"waypoints": [
+            {"x": x, "y": y} for x, y in [crashed_session.game.pad, crashed_session.game.star]
+        ]}, crashed_session.game.level_layout())
+        crashed_session.game.state = "FLYING"
+        crashed_session.game.tries = 1
+        for _ in range(400):
+            crashed_session.game.update("IDLE", None, .02)
+            if crashed_session.game.state != "FLYING":
+                break
+        assert crashed_session.game.state == "CRASHED"
+        assert crashed_session.game.benchmark_job.done.wait(5)
+        crash_snapshot = crashed_session.snapshot()
+        assert crash_snapshot["comparison"]["status"] == "ready"
 
     script = """<script type="module">
     try {
       const [{createUI}, {createControls}, {createRenderer}, {createGeminiReplay}] = await Promise.all([
         import('/src/ui.js'), import('/src/controls.js'), import('/src/renderer.js'), import('/src/replay.js')]);
       const snapshot = SNAPSHOT;
+      const crashSnapshot = CRASH_DATA;
       const canvas = document.querySelector('#game-canvas'), panel = document.querySelector('#comparison');
       const state = {game:null, input:{mode:'IDLE',point:null}, selectedInput:'HAND', freeDraw:false, freeInk:[], debug:false, autopilot:false};
       const ui = createUI({canvas, statusText:document.querySelector('#status-text'), toast:document.querySelector('#toast')});
@@ -127,6 +144,12 @@ def main():
       frame = replay.frame(state, 18400);
       check(frame.clouds[0].vx < 0 && frame.clouds[0].x <= snapshot.fieldWidth - 45, 'replay storms bounce');
       check(state.game.launchClouds[0].vx === 60, 'replay does not mutate game storms');
+      state.game.comparison = {...state.game.comparison, planner:'gemini',
+        aiTime: state.game.comparison.aiTime - 0.1};
+      frame = replay.frame(state, 18500);
+      check(frame.elapsed === 0 && frame.plane.x === path[0].x
+        && frame.clouds[0].x === state.game.launchClouds[0].x,
+        'faster route restarts drone and clouds together');
       state.game = snapshot;
       const renderer = createRenderer({canvas,cameraVideo:document.querySelector('#camera-video')});
       const context = canvas.getContext('2d'), labels = [], fillText = context.fillText.bind(context);
@@ -200,9 +223,40 @@ def main():
       document.querySelector('#toast').classList.add('hidden');
       window.scrollTo(0,0);
       check(document.documentElement.scrollWidth <= innerWidth,'overflow');
+      // Use a real crash and the local planner's real verified trajectory.
+      // Assert pixels beyond the crash point, not just the status message.
+      state.freeDraw = false;
+      crashSnapshot.comparison.planning = true;
+      ui.applySnapshot(state, crashSnapshot);
+      renderer.render(state, false, 24000);
+      check(panel.getAttribute('aria-busy') === 'true' && !replayButton.disabled,
+        'verified flight visible while Gemini still plans');
+      check(document.querySelector('#comparison-title').textContent.includes('Safe route found'),
+        'real crash shows route result');
+      check(document.querySelector('#comparison-note').textContent.includes('Local simulator route'),
+        'fallback attribution');
+      const purplePixels = () => {
+        const pixels = context.getImageData(0,0,canvas.width,canvas.height).data;
+        let count = 0;
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = Math.floor(canvas.width * 0.65); x < canvas.width * 0.8; x++) {
+            const i = (y * canvas.width + x) * 4;
+            if (pixels[i] === 99 && pixels[i+1] === 52 && pixels[i+2] === 167) count++;
+          }
+        }
+        return count;
+      };
+      check(purplePixels() > 20, 'full purple route drawn past the crash before replay advances');
+      crashSnapshot.comparison.planning = false;
+      ui.applySnapshot(state, crashSnapshot);
+      check(document.querySelector('#status-text').textContent.startsWith('Safe route shown in purple.'),
+        'finished planning updates status without another crash');
+      for (let time = 24100; time <= 34000; time += 100) renderer.render(state,false,time);
+      check(purplePixels() > 20, 'full purple route persists after replay');
+      document.querySelector('#toast').classList.add('hidden');
       document.body.dataset.qa = 'passed';
     } catch(error) {document.body.dataset.qa = 'FAILED: ' + error.message;}
-    </script>""".replace("SNAPSHOT", json.dumps(snapshot))
+    </script>""".replace("SNAPSHOT", json.dumps(snapshot)).replace("CRASH_DATA", json.dumps(crash_snapshot))
     page = (ROOT / "web/index.html").read_text(encoding="utf-8").replace(
         '<script type="module" src="./src/app.js"></script>', script)
 

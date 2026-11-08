@@ -146,6 +146,25 @@ class PredictivePlanningTests(unittest.TestCase):
         self.assertIsNone(result["best"])
         self.assertLessEqual(result["tested"], route_planner.MAX_REFINEMENTS_PER_ROUND)
 
+    def test_local_search_shortens_route_and_respects_budget(self):
+        scene = layout([(480, 300, 45, 0)], wind=(0, 0))
+        original = copy.deepcopy(scene)
+        wide = route_planner.evaluate(CURVED_ROUTE, scene)
+        result = route_planner.find_route(scene)
+        best = result["best"]
+        self.assertIsNotNone(best)
+        verified = flight_sim.simulate(best["route"], scene)
+        self.assertEqual(verified["state"], "LANDED")
+        self.assertLess(verified["time"], wide["outcome"]["time"])
+        self.assertLessEqual(result["tested"], route_planner.MAX_LOCAL_SIMULATIONS)
+        self.assertEqual(scene, original)
+
+    def test_local_search_does_not_display_a_route_for_an_impossible_scene(self):
+        scene = layout([(200, 300, 500, 0)])
+        result = route_planner.find_route(scene)
+        self.assertIsNone(result["best"])
+        self.assertLessEqual(result["tested"], route_planner.MAX_LOCAL_SIMULATIONS)
+
 
 if __name__ == "__main__":
     unittest.main()

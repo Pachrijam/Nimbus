@@ -1,7 +1,7 @@
 """Server-only Gemini route proposals, verified in the game's real simulator.
 
 No model-reported scores are trusted. At most two requests are made per level;
-the fastest successful proposal or predictive refinement is the benchmark,
+the fastest verified local route, proposal, or predictive refinement is the benchmark,
 not a global optimum.
 """
 import json
@@ -140,11 +140,27 @@ def simulation_feedback(node, source="gemini"):
             "collision": outcome.get("collision"), "encounters": outcome.get("encounters", [])}
 
 
-def build_benchmark(layout, api_key, model):
-    best = None
+def build_local_benchmark(layout):
+    planning = route_planner.find_route(layout)
+    node = planning["best"]
+    if node is None:
+        return None
+    outcome = node["outcome"]
+    return {"status": "ready", "model": None, "planner": "local",
+            "tested": planning["tested"], "refined": planning["refined"],
+            "time": outcome["time"], "distance": outcome["distance"],
+            "trajectory": outcome["trajectory"], "route": node["route"]}
+
+
+def build_benchmark(layout, api_key, model, *, initial=None, on_result=None):
+    best = initial
     feedback = []
-    tested = 0
-    refined = 0
+    tested = initial["tested"] if initial else 0
+    refined = initial["refined"] if initial else 0
+
+    def snapshot(planning=False):
+        return {**best, "status": "ready", "model": model if best["planner"] != "local" else None,
+                "tested": tested, "refined": refined, "planning": planning}
 
     def consider(node, planner):
         nonlocal best
@@ -152,6 +168,8 @@ def build_benchmark(layout, api_key, model):
         if outcome["state"] == "LANDED" and (best is None or outcome["time"] < best["time"]):
             best = {"time": outcome["time"], "distance": outcome["distance"],
                     "trajectory": outcome["trajectory"], "route": node["route"], "planner": planner}
+            if on_result is not None:
+                on_result(snapshot(planning=True))
 
     for _ in range(2):
         try:
@@ -187,7 +205,7 @@ def build_benchmark(layout, api_key, model):
     if best is None:
         return {"status": "unavailable", "message": "Gemini did not find a flyable route this round. Retry or continue to the next level.",
                 "tested": tested, "refined": refined}
-    return {"status": "ready", "model": model, "tested": tested, "refined": refined, **best}
+    return snapshot()
 
 
 class BenchmarkJob:
@@ -196,11 +214,7 @@ class BenchmarkJob:
         self.result = {"status": "pending", "message": "Gemini is planning and testing its routes..."}
         self.done = threading.Event()
         api_key, model = gemini_settings(DEFAULT_MODEL)
-        if not api_key:
-            self.result = {"status": "disabled", "message": "AI comparison is off for this session. Retry or continue to the next level."}
-        elif not re.fullmatch(r"gemini-[a-zA-Z0-9.\-]+", model):
-            self.result = {"status": "unavailable", "message": "Check GEMINI_MODEL on the server."}
-        elif not _slots.acquire(blocking=False):
+        if not _slots.acquire(blocking=False):
             self.result = {"status": "unavailable", "message": "Gemini pilots are busy. You can still retry or continue."}
         else:
             worker = threading.Thread(target=self._run, args=(layout, api_key, model), daemon=True)
@@ -215,12 +229,29 @@ class BenchmarkJob:
 
     def _run(self, layout, api_key, model):
         try:
-            self.result = build_benchmark(layout, api_key, model)
+            initial = build_local_benchmark(layout)
+            can_request = bool(api_key and re.fullmatch(r"gemini-[a-zA-Z0-9.\-]+", model))
+            if initial is not None:
+                self.result = {**initial, "planning": can_request}
+            if can_request:
+                self.result = build_benchmark(layout, api_key, model, initial=initial,
+                                              on_result=self._publish)
+            elif initial is None:
+                self.result = {"status": "unavailable", "message": "No verified route found. Configure Gemini or try another level."}
         except AgentError as error:
-            self.result = {"status": "unavailable", "message": str(error)}
+            self._fail(str(error))
         except Exception:
             # Do not expose exception text: a provider error may contain credentials.
-            self.result = {"status": "unavailable", "message": "Gemini comparison is unavailable. You can still continue."}
+            self._fail("Gemini comparison is unavailable. You can still continue.")
         finally:
             self.done.set()
             _slots.release()
+
+    def _publish(self, result):
+        self.result = result
+
+    def _fail(self, message):
+        if self.result["status"] == "ready":
+            self.result = {**self.result, "planning": False, "message": message}
+        else:
+            self.result = {"status": "unavailable", "message": message}

@@ -273,9 +273,9 @@ class Game:
         result = {"playerState": self.state, "playerTime": elapsed,
                   "playerDistance": self.flight_distance,
                   "bestTime": self.best_time, "status": "pending"}
-        if self.benchmark_job is None or not self.benchmark_job.done.is_set():
+        benchmark = self.benchmark_job.result if self.benchmark_job is not None else None
+        if benchmark is None or benchmark["status"] == "pending":
             return {**result, "message": "Gemini is planning and testing its routes..."}
-        benchmark = self.benchmark_job.result
         result.update({"status": benchmark["status"], "message": benchmark.get("message", "")})
         if benchmark["status"] == "ready":
             result.update({"aiTime": benchmark["time"], "aiDistance": benchmark["distance"],
@@ -283,6 +283,7 @@ class Game:
                            "tested": benchmark["tested"],
                            "planner": benchmark.get("planner", "gemini"),
                            "refined": benchmark.get("refined", 0),
+                           "planning": benchmark.get("planning", False),
                            "aiTrajectory": [{"x": x, "y": y} for x, y in benchmark["trajectory"]]})
             if self.state == "LANDED":
                 ratio = benchmark["time"] / max(elapsed, flight_sim.STEP)
@@ -332,14 +333,15 @@ class Game:
             visuals.draw_message(img, "Draw a route from the drone to the destination", 1.0)
         elif self.state == "LANDED":
             result = self.comparison()
+            pilot = "Route planner" if result.get("planner") == "local" else "Gemini"
             if result["status"] == "ready":
                 gap = abs(result["timeDelta"])
                 if gap < 0.005:
-                    outcome = "You tied Gemini!"
+                    outcome = f"You tied {pilot}!"
                 elif result["timeDelta"] < 0:
-                    outcome = f"You beat Gemini by {gap:.2f} s!"
+                    outcome = f"You beat {pilot} by {gap:.2f} s!"
                 else:
-                    outcome = f"Gemini finished {gap:.2f} s ahead"
+                    outcome = f"{pilot} finished {gap:.2f} s ahead"
                 message = f"{outcome} | R: retry  N: next"
             elif result["status"] == "pending":
                 message = "Delivered! Gemini planning... R: retry  N: next"
@@ -351,7 +353,7 @@ class Game:
         elif self.state == "CRASHED":
             result = self.comparison()
             message = (
-                f"AI found safe route in {result['aiTime']:.2f} s | R: retry  N: next"
+                f"Verified safe route: {result['aiTime']:.2f} s | R: retry  N: next"
                 if result["status"] == "ready"
                 else "Route failed. AI planning... R: retry  N: next"
                 if result["status"] == "pending"

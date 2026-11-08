@@ -14,6 +14,7 @@ import physics
 
 MAX_REFINEMENTS_PER_ROUND = 32
 MAX_WAYPOINTS = 16
+MAX_LOCAL_SIMULATIONS = 96
 
 
 def evaluate(waypoints, layout):
@@ -135,3 +136,54 @@ def refine_routes(seeds, layout, *, max_simulations=MAX_REFINEMENTS_PER_ROUND):
             if result["tested"] >= max_simulations:
                 break
     return result
+
+
+def find_route(layout):
+    """Find a verified baseline without depending on a model response.
+
+    Explore both sides of the field, repair collisions, then shorten the best
+    successful route. Every improvement must land under the real flight rules.
+    """
+    start, end = tuple(layout["pad"]), tuple(layout["star"])
+    seeds = [evaluate([start, end], layout)]
+    for fraction in (0.15, 0.3, 0.7, 0.85):
+        for axis in (0, 1):
+            # Horizontal and vertical corridors also handle tall/narrow levels.
+            points = []
+            for along in (0.25, 0.75):
+                point = [start[i] + along * (end[i] - start[i]) for i in (0, 1)]
+                point[axis] = fraction * layout["width" if axis == 0 else "height"]
+                points.append(tuple(point))
+            seeds.append(evaluate([start, *points, end], layout))
+    planning = refine_routes(seeds, layout, max_simulations=64)
+    successful = [node for node in seeds if node["outcome"]["state"] == "LANDED"]
+    if planning["best"] is not None:
+        successful.append(planning["best"])
+    best = min(successful, key=lambda node: node["outcome"]["time"], default=None)
+    tested = len(seeds) + planning["tested"]
+    # Pull corners towards their neighbours and remove unnecessary waypoints.
+    # Re-run after improvements because timing changes moving-cloud clearance.
+    while best is not None and tested < MAX_LOCAL_SIMULATIONS:
+        previous = best
+        points = best["waypoints"]
+        for index in range(1, len(points) - 1):
+            before, after = points[index - 1], points[index + 1]
+            midpoint = ((before[0] + after[0]) / 2, (before[1] + after[1]) / 2)
+            candidates = [points[:index] + points[index + 1:]]
+            for fraction in (0.75, 0.5, 0.25):
+                corner = tuple(points[index][i] + fraction * (midpoint[i] - points[index][i])
+                               for i in (0, 1))
+                candidates.append(points[:index] + [corner] + points[index + 1:])
+            for candidate in candidates:
+                trial = evaluate(candidate, layout)
+                tested += 1
+                if (trial["outcome"]["state"] == "LANDED"
+                        and trial["outcome"]["time"] < best["outcome"]["time"]):
+                    best = trial
+                if tested >= MAX_LOCAL_SIMULATIONS:
+                    break
+            if tested >= MAX_LOCAL_SIMULATIONS:
+                break
+        if best is previous:
+            break
+    return {"best": best, "tested": tested, "refined": tested - len(seeds)}

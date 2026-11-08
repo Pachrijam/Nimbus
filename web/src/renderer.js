@@ -270,15 +270,17 @@ export function createRenderer({ canvas, cameraVideo }) {
 
   function drawComparisonStatus(game, replay) {
     const result = game.comparison;
+    const pilot = result?.planner === "local" ? "Verified route" : "Gemini";
     if (game.state === "CRASHED") {
       const title = replay
-        ? replay.done ? "Gemini completed the safe route" : `Gemini safe route: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`
+        ? replay.done ? `${pilot}: destination reached` : `${pilot} safe route: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`
         : result?.status === "pending" ? "Route failed. Gemini is searching for a safe route..."
           : result?.status === "ready" ? `Gemini found a safe route in ${result.aiTime.toFixed(2)} s`
             : result?.status === "disabled" ? "Route failed. AI comparison is off."
               : "Route failed. Gemini could not find a safe route.";
       const detail = replay
-        ? "Orange: your failed route   |   Purple: Gemini's verified route"
+        ? result.planning ? "Purple: fastest verified route so far. Gemini is checking alternatives."
+          : `Orange: your failed route   |   Purple: ${pilot}'s flight`
         : "Your failed route is orange. Gemini's verified route will appear in purple.";
       ctx.save();
       roundedRect(ctx, 90, HEIGHT - 82, WIDTH - 180, 66, 10);
@@ -297,8 +299,9 @@ export function createRenderer({ canvas, cameraVideo }) {
     let title = "Delivered! Gemini is planning and testing its routes...";
     let detail = "Your flight is orange. Gemini's flight will appear in purple.";
     if (replay) {
-      title = replay.done ? "Gemini's flight complete" : `Watch Gemini fly: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`;
-      detail = "Orange: your flight   |   Purple: Gemini   |   Replay and results below";
+      title = replay.done ? `${pilot}: flight complete` : `Watch ${pilot} fly: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`;
+      detail = result.planning ? "Gemini is checking alternatives. The fastest verified route stays visible."
+        : `Orange: your flight   |   Purple: ${pilot}   |   Replay and results below`;
     } else if (result?.status === "disabled") {
       title = "Delivered! Mission complete.";
       detail = "AI comparison is off. Press N for the next level or R to retry.";
@@ -345,6 +348,9 @@ export function createRenderer({ canvas, cameraVideo }) {
     else if (["LANDED", "CRASHED"].includes(game.state)) {
       drawPath(game.trajectory, "#b43b13", 7);
       if (game.comparison?.status === "ready") {
+        // Show the entire verified trajectory immediately, even before replay
+        // advances. A light outline keeps it visible over clouds and player ink.
+        drawPath(game.comparison.aiTrajectory, "rgba(255,255,255,.9)", 8);
         drawPath(game.comparison.aiTrajectory, "#6334a7", 4, true);
         if (replay && !replay.done) drawPath(replay.trail, "#8d50df", 5);
       }
@@ -386,7 +392,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.fillStyle = "#412074";
       ctx.font = "700 13px 'DM Sans', sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("GEMINI", replay.plane.x, replay.plane.y - 35);
+      ctx.fillText(game.comparison.planner === "local" ? "VERIFIED" : "GEMINI", replay.plane.x, replay.plane.y - 35);
       ctx.restore();
     }
     drawCursor(input);

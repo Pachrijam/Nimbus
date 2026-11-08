@@ -124,7 +124,7 @@ crashes, Gemini tries to find a safe route through the same level; after a
 successful delivery, it benchmarks your flight against its own proposals.
 Gemini proposes routes for the same level, and Python flies each proposal
 through the same fixed-step physics, wind, and moving clouds as the player.
-The fastest successful proposal becomes the benchmark. Both actual flight paths
+The fastest verified route becomes the benchmark. Both actual flight paths
 appear on the field; after a crash, the result calls out Gemini's safe route
 instead of claiming a time win. After a delivery, the results lead with who
 finished faster and the time difference in seconds. Both flight times, the time
@@ -133,7 +133,14 @@ gap, and your best time on this level appear below. Close finishes are labeled
 This is the **best verified route**, including
 collision-avoiding refinements on stationary and moving-cloud levels, not
 a mathematically guaranteed optimal path. Gemini's machine learning generates
-the routes; the simulator computes every metric, not the model.
+route proposals; the simulator computes every metric, not the model.
+
+A local planner first checks up to 96 routes, including cloud detours and
+shortcuts, and displays its fastest successful flight immediately. This route is
+labeled **Local simulator route**, with a purple path and replay, while Gemini
+checks alternatives in the background. A faster verified Gemini route replaces
+it automatically and restarts the replay. Missing keys and provider failures
+retain the local route when one was found; they do not leave just a message.
 
 For levels with moving clouds, Gemini also receives a forecast of cloud positions
 at one-second intervals through the 30-second simulation limit. Forecasts use the
@@ -147,15 +154,17 @@ estimated entry and exit times, then re-simulates the entire route with wind,
 turn limits, smoothing, and every other cloud. Failed detours can be repaired
 again using their new collision times. Routes may cross a cloud's initial
 position if the cloud has moved away by arrival; the drone cannot stop or wait.
-The planner tests at most 32 refinements per batch (64 per level) without extra
+The planner tests at most 32 refinements per Gemini batch (64 per level, in
+addition to the initial local search) without extra
 Gemini calls, and accepts only successful full simulations. If a refined route
 wins, the results identify it as **Gemini + predictive cloud planning**. This is
 a bounded search over Gemini's proposals, not a guarantee of success or optimality.
 
-In the browser, a purple Gemini drone automatically replays its verified flight
-after the benchmark is ready. Your flight stays orange, and the storms replay
-from their original launch positions. The full dashed Gemini route remains
-visible afterward. Use **Replay Gemini's flight** below the field to watch again
+In the browser, a purple drone automatically replays the best verified flight
+as soon as it is available, without waiting for Gemini's requests to finish.
+Your flight stays orange, and the storms replay from their original launch
+positions. The full dashed purple route is visible before, during, and after
+the replay. Use the replay button below the field to watch again
 without making another API request. Planning and unavailable messages also
 appear on the field while you wait.
 
@@ -195,11 +204,12 @@ through Python's standard library; there is no additional SDK dependency.
 Only level geometry and simulation feedback go to Google, not camera images,
 hand landmarks, or the player's route. Each completed level makes at most two
 API calls (initial proposals and refinement), with a 25-second timeout per call
-and up to six routes per response, plus at most 64 local predictive refinements.
+and up to six routes per response, plus at most 64 predictive refinements and
+96 initial local route simulations.
 Requests and local planning run in the background; the player
 can retry or continue while waiting. Results are retained per level for the
-session. Missing keys, API errors, and proposals that fail flight validation
-show an unavailable state without blocking the game or inventing a benchmark.
+session. An unavailable state is shown only when no verified route is available;
+no flight time or successful path is invented.
 API usage is subject to your Gemini account's quotas and billing.
 
 Implementation: `gemini_agent.py` handles proposals and background requests;
