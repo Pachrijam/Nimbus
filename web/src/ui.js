@@ -55,7 +55,7 @@ export function createUI({ canvas, statusText, toast }) {
     toastTimeout = window.setTimeout(() => toast.classList.add("hidden"), duration);
   }
 
-  function applySnapshot(state, snapshot) {
+  function applySnapshot(state, snapshot, acceptInput = true) {
     const { game, selectedInput, input, freeDraw } = state;
     const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
     state.game = snapshot;
@@ -63,8 +63,10 @@ export function createUI({ canvas, statusText, toast }) {
     if (!freeDraw && snapshot.comparison?.status === "ready" && (changed || game?.comparison?.status !== "ready")) {
       showToast("Watch Gemini's purple drone fly its route. Your flight stays orange.", 5000);
     }
-    if (selectedInput === "HAND") Object.assign(input, snapshot.cursor);
-    canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two or more fingers to launch.`);
+    if (selectedInput === "HAND" && acceptInput) Object.assign(input, snapshot.cursor);
+    canvas.setAttribute("aria-label", freeDraw
+      ? "Free draw canvas. One finger draws; two or more fingers change color."
+      : `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two or more fingers to launch.`);
     if (changed && !freeDraw) {
       if (selectedInput !== "HAND" && snapshot.state !== "LANDED") {
         setStatus("Select Start to draw with your camera.");

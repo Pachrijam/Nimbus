@@ -105,6 +105,15 @@ Camera images are never uploaded. Free-draw ink and display controls stay in
 the browser. Reloading starts a new game; idle sessions expire after 30 minutes.
 If the connection fails, the game stops and asks you to reload.
 
+Press **P** or the pencil button for Free Draw. One raised index finger draws;
+two or more raised fingers lift the pen and cycle its color once per gesture.
+Use the browser's palette and Fine/Medium/Bold sizes to choose a pen, **U / Undo**
+to remove the last stroke, or **C / Clear** to erase the canvas. **Esc**, **P**, or
+**Back to game** resumes the paused mission. Ink stays when switching modes
+and is cleared on reload. Game shortcuts R, N, and V are disabled in Free Draw.
+Desktop Free Draw supports the same drawing/color gestures, C to clear, and
+P or Esc to return to the game.
+
 Hand tracking loads MediaPipe and its model from the internet and requires
 HTTPS when deployed (localhost is allowed for development).
 

@@ -99,10 +99,12 @@ def main():
                 break
             if key == ord("p"):
                 free_draw_mode = not free_draw_mode
-                free_draw.prev_point = None
+                free_draw.end_stroke()
+                gestures.reset()
             elif key == 27 and free_draw_mode:
                 free_draw_mode = False
-                free_draw.prev_point = None
+                free_draw.end_stroke()
+                gestures.reset()
             elif key == ord("f"):
                 fullscreen = not fullscreen
                 cv2.setWindowProperty(

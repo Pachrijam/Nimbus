@@ -19,8 +19,8 @@ class FreeDraw:
         self.prev_mode = "IDLE"
  
     def update(self, mode, point):
-        # A new stroke after a HOVER switches to the next color (peace sign = change pen)
-        if mode == "DRAW" and self.prev_mode == "HOVER":
+        # A held peace sign changes the pen once and immediately previews it.
+        if mode == "HOVER" and self.prev_mode != "HOVER":
             self.color_index = (self.color_index + 1) % len(COLORS)
             self.color = COLORS[self.color_index]
         self.prev_mode = mode
@@ -28,6 +28,8 @@ class FreeDraw:
         if mode == "DRAW" and point is not None:
             if self.prev_point is not None:
                 cv2.line(self.ink, self.prev_point, point, self.color, self.thickness, cv2.LINE_AA)
+            else:
+                cv2.circle(self.ink, point, self.thickness // 2, self.color, -1, cv2.LINE_AA)
             self.prev_point = point
         else:
             self.prev_point = None
@@ -38,10 +40,14 @@ class FreeDraw:
         mask = gray > 0
         output[mask] = self.ink[mask]
  
-        visuals.draw_text(output, "FREE DRAW", 15, 35, 0.8, (120, 230, 255))
+        visuals.draw_text(output, "FREE DRAW", 15, 35, 0.8)
         visuals.draw_text(output, "point: draw   peace: next color   c: clear   p: back to game", 15, 62, 0.5)
         cv2.circle(output, (200, 28), 10, self.color, -1, cv2.LINE_AA)
         return output
+
+    def end_stroke(self):
+        self.prev_point = None
+        self.prev_mode = "IDLE"
  
     def clear(self):
         self.ink[:] = 0
