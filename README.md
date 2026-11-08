@@ -78,9 +78,9 @@ python -m pip install mediapipe
 
 Drawing uses hand gestures only. The desktop app requires MediaPipe, the model,
 and a working webcam; if any is unavailable, it exits with setup instructions.
-In the browser, click **Hand tracking** and allow camera access. Draw with one
-index finger, then hold up two fingers to launch. If camera access fails, check
-permissions and click **Hand tracking** again.
+In the browser, click **Start** and allow camera access. Draw with one
+index finger, then hold up two or more fingers to launch. If camera access fails, check
+permissions and click **Start** again.
 
 Keys: `q` quit · `p` Free Draw/Game · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear · `d` debug
 
@@ -105,6 +105,15 @@ Camera images are never uploaded. Free-draw ink and display controls stay in
 the browser. Reloading starts a new game; idle sessions expire after 30 minutes.
 If the connection fails, the game stops and asks you to reload.
 
+Press **P** or the pencil button for Free Draw. One raised index finger draws;
+two or more raised fingers lift the pen and cycle its color once per gesture.
+Use the browser's palette and Fine/Medium/Bold sizes to choose a pen, **U / Undo**
+to remove the last stroke, or **C / Clear** to erase the canvas. **Esc**, **P**, or
+**Back to game** resumes the paused mission. Ink stays when switching modes
+and is cleared on reload. Game shortcuts R, N, and V are disabled in Free Draw.
+Desktop Free Draw supports the same drawing/color gestures, C to clear, and
+P or Esc to return to the game.
+
 Hand tracking loads MediaPipe and its model from the internet and requires
 HTTPS when deployed (localhost is allowed for development).
 
@@ -116,9 +125,26 @@ physics, wind, and moving clouds as the player. The fastest successful proposal
 becomes the benchmark. Both actual flight paths appear on the field; the results
 show flight times, your best time on this level, and AI performance
 (`Gemini flight time / your flight time * 100`). A result above 100% beats Gemini;
-95–100% matches its performance. This is Gemini's **best verified proposal**, not
+95–100% matches its performance. This is the **best verified route**, including
+predictive refinements on moving-cloud levels, not
 a mathematically guaranteed optimal path. Gemini's machine learning generates
 the routes; the simulator computes every metric, not the model.
+
+For levels with moving clouds, Gemini also receives a forecast of cloud positions
+at one-second intervals through the 30-second simulation limit. Forecasts use the
+same movement and edge-bounce rules as the game. Simulation feedback includes
+the time and position of collisions and each cloud's closest encounter.
+
+After each proposal batch, a bounded planner tries detours around predicted
+collision locations. It forecasts where the cloud will be at the detour's
+estimated entry and exit times, then re-simulates the entire route with wind,
+turn limits, smoothing, and every other cloud. Failed detours can be repaired
+again using their new collision times. Routes may cross a cloud's initial
+position if the cloud has moved away by arrival; the drone cannot stop or wait.
+The planner tests at most 32 refinements per batch (64 per level) without extra
+Gemini calls, and accepts only successful full simulations. If a refined route
+wins, the results identify it as **Gemini + predictive cloud planning**. This is
+a bounded search over Gemini's proposals, not a guarantee of success or optimality.
 
 In the browser, a purple Gemini drone automatically replays its verified flight
 after the benchmark is ready. Your flight stays orange, and the storms replay
@@ -162,7 +188,8 @@ through Python's standard library; there is no additional SDK dependency.
 Only level geometry and simulation feedback go to Google, not camera images,
 hand landmarks, or the player's route. Each completed level makes at most two
 API calls (initial proposals and refinement), with a 25-second timeout per call
-and up to six routes per response. Requests run in the background; the player
+and up to six routes per response, plus at most 64 local predictive refinements.
+Requests and local planning run in the background; the player
 can retry or continue while waiting. Results are retained per level for the
 session. Missing keys, API errors, and proposals that fail flight validation
 show an unavailable state without blocking the game or inventing a benchmark.

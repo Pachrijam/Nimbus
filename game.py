@@ -13,12 +13,13 @@ import gemini_agent
 import paths
 import physics
  
-START_RADIUS = 90        # px: the path must start this close to the plane
+START_RADIUS = 18        # px: cursor must overlap the drone to begin drawing
+START_CLEARANCE = 90     # px: keep clouds away from the launch area
 STAR_RADIUS = flight_sim.STAR_RADIUS
 HAND_FINISH_RADIUS = 60  # px: snap a nearby hand-drawn endpoint to the star
 MIN_PATH_POINTS = 10     # ignore accidental tiny paths
 MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
-PAD_MARGIN = 90          # px from the left edge
+PAD_MARGIN = 120         # px from the left edge
 MAX_CLOUDS = 8
 CLOUD_RADIUS = 45
 DRAWING_PAUSE_TIME = 0.3  # seconds allowed for a brief tracking dropout
@@ -99,7 +100,7 @@ class Game:
                 valid = True
  
                 # Keep clouds away from the starting point and destination
-                if paths.distance(position, self.pad) < r + START_RADIUS + 30:
+                if paths.distance(position, self.pad) < r + START_CLEARANCE + 30:
                     valid = False
  
                 if paths.distance(position, self.star) < r + STAR_RADIUS + 30:
@@ -283,6 +284,8 @@ class Game:
                            "matchPercent": round(100 * ratio, 1), "timeDelta": delta,
                            "verdict": verdict, "model": benchmark["model"],
                            "tested": benchmark["tested"],
+                           "planner": benchmark.get("planner", "gemini"),
+                           "refined": benchmark.get("refined", 0),
                            "aiTrajectory": [{"x": x, "y": y} for x, y in benchmark["trajectory"]]})
         return result
  

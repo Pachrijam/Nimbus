@@ -75,7 +75,7 @@ git push
 |---|---|---|
 | 1 | Print `landmarks[8].y` and `landmarks[6].y` every frame; raise and lower your finger | You can see: finger up means tip y is **smaller** |
 | 2 | `index_up`, `middle_up` booleans | Debug line shows the right mode as you change your hand |
-| 3 | Raw mode: index only → `DRAW`, index + middle → `HOVER`, else `IDLE` | Modes switch correctly |
+| 3 | Raw mode: index only → `DRAW`, two or more fingers → `HOVER`, else `IDLE` | Modes switch correctly |
 | 4 | Debounce with `state["candidate"]` / `state["count"]` / `DEBOUNCE_FRAMES` | No flicker when your hand is still |
 | 5 | Smoothing with `state["smooth"]`, `SMOOTHING` | Cursor moves smoothly; no jitter when your hand is still |
 | 6 | Reset `state["smooth"] = None` when no hand; first frame back sets smooth = raw | No line glides in from the old position |

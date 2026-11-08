@@ -12,25 +12,24 @@
     <main class="app-shell">
       <header class="topbar">
         <a class="brand" href="./" aria-label="Nimbus home">
-          <span class="brand-mark" aria-hidden="true">N</span>
-          <span>Nimbus <span class="brand-light">/ Flight Path</span></span>
+          Nimbus
         </a>
         <div class="topbar-note"><span class="status-dot"></span> Camera images stay in this browser</div>
       </header>
 
       <section class="intro" aria-labelledby="page-title">
         <div>
-          <p class="eyebrow">A route-planning game</p>
+          <p class="eyebrow">A route-planning simulator</p>
           <h1 id="page-title">Draw a path. <span>Challenge Gemini.</span></h1>
-          <p class="intro-copy">Draw in the air, dodge the storms, and deliver. Then compare your flight with Gemini's best verified route. Can you beat the AI?</p>
+          <p class="intro-copy">Draw in the air, dodge the storm clouds, and reach the goal! Compare your flight against Gemini's most optimal route. Can you beat the AI?</p>
         </div>
       </section>
 
       <section class="game-panel" aria-label="Nimbus game">
         <div class="toolbar">
           <div class="toolbar-group input-controls" aria-label="Hand tracking">
-            <button class="tool-button" id="camera-mode" type="button" aria-pressed="false">
-              <span aria-hidden="true">◎</span> Hand tracking
+            <button class="tool-button start-game-button" id="camera-mode" type="button" aria-pressed="false">
+              <span aria-hidden="true">▶</span> Start
             </button>
           </div>
           <div class="toolbar-group">
@@ -42,9 +41,21 @@
           </div>
         </div>
 
+        <div class="free-draw-tools hidden" id="free-draw-tools" aria-label="Drawing tools">
+          <span>Pen</span>
+          <div id="pen-colors" class="pen-colors" role="group" aria-label="Pen color"></div>
+          <label for="pen-size">Size</label>
+          <select id="pen-size">
+            <option value="4">Fine</option>
+            <option value="8" selected>Medium</option>
+            <option value="16">Bold</option>
+          </select>
+          <button class="tool-button" id="undo-drawing" type="button" title="Undo stroke (U)" disabled>Undo</button>
+          <span class="drawing-hint">One finger draws · Two fingers change color</span>
+        </div>
         <div class="canvas-wrap" id="canvas-wrap">
           <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
-          <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two fingers to launch."></canvas>
+          <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two or more fingers to launch."></canvas>
           <div class="camera-preview hidden" id="camera-preview" aria-label="Mirrored webcam preview">
             <video id="camera-video" autoplay playsinline muted></video>
             <span class="camera-label"><span class="live-dot"></span> CAMERA</span>
@@ -77,7 +88,7 @@
         </section>
 
         <div class="panel-footer">
-          <p class="status-text" id="status-text" role="status">Enable hand tracking to draw with your camera.</p>
+          <p class="status-text" id="status-text" role="status">Select Start to draw with your camera.</p>
           <div class="quick-controls"><kbd>R</kbd><span>Retry</span><kbd>N</kbd><span>Next level</span><kbd>P</kbd><span>Free draw</span></div>
         </div>
       </section>
@@ -85,7 +96,7 @@
       <section class="how-to" aria-label="How to play">
         <article class="step-card">
           <span class="step-number">01</span>
-          <div><h2>Start at the drone</h2><p>Enable hand tracking and allow camera access. Raise your index finger and draw from the launch pad.</p></div>
+          <div><h2>Start at the drone</h2><p>Select Start and allow camera access. Raise your index finger and place the cursor directly over the drone to begin drawing.</p></div>
         </article>
         <article class="step-card">
           <span class="step-number">02</span>
@@ -93,7 +104,7 @@
         </article>
         <article class="step-card">
           <span class="step-number">03</span>
-          <div><h2>Deliver, then challenge Gemini</h2><p>Hold up two fingers to launch. After delivery, compare flight times and routes. Retry the same mission to match or beat Gemini, or choose the next level.</p></div>
+          <div><h2>Deliver, then challenge Gemini</h2><p>Hold up two or more fingers to launch. After delivery, compare flight times and routes. Retry the same mission to match or beat Gemini, or choose the next level.</p></div>
         </article>
       </section>
 

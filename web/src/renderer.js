@@ -1,5 +1,7 @@
 import { WIDTH, HEIGHT } from "./config.js";
 import { createGeminiReplay } from "./replay.js";
+import { updateCanvasResolution } from "./canvas-resolution.js";
+import { drawStartZone } from "./start-zone.js";
 
 export function createRenderer({ canvas, cameraVideo }) {
   const ctx = canvas.getContext("2d");
@@ -83,6 +85,10 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fillStyle = shade;
     ctx.fillRect(-1.3, -1.3, 2.6, 2.6);
     ctx.restore();
+
+    ctx.strokeStyle = "rgba(48,74,98,.8)";
+    ctx.lineWidth = 2 / cloud.r;
+    ctx.stroke();
 
     if (debug) {
       ctx.strokeStyle = "rgba(58,91,105,.6)";
@@ -222,35 +228,42 @@ export function createRenderer({ canvas, cameraVideo }) {
     roundedRect(ctx, 158, 17, 320, 76, 8);
     ctx.fillStyle = "rgba(10,31,43,.75)";
     ctx.fill();
+    const scoreRowY = 38;
+    const attemptsRowY = 69;
+    ctx.textBaseline = "middle";
     ctx.font = "600 15px 'DM Sans', sans-serif";
     ctx.fillStyle = "#ffe09a";
-    ctx.fillText(`SCORE ${game.score}`, 174, 44);
+    ctx.fillText(`SCORE: ${game.score}`, 174, scoreRowY);
     ctx.fillStyle = "rgba(255,255,255,.72)";
     ctx.font = "12px 'DM Sans', sans-serif";
-    ctx.fillText(`ATTEMPTS ${game.tries}`, 174, 73);
+    ctx.fillText(`ATTEMPTS: ${game.tries}`, 174, attemptsRowY);
 
-    const start = { x: 342, y: 50 };
+    const windCenter = { x: 364, y: scoreRowY };
     const length = Math.hypot(game.wind.x, game.wind.y);
     const angle = length > 1 ? Math.atan2(game.wind.y, game.wind.x) : 0;
-    const end = { x: start.x + Math.cos(angle) * (18 + length * 0.35), y: start.y + Math.sin(angle) * (18 + length * 0.35) };
+    const halfLength = Math.min(40, 30 + length * 0.35) / 2;
+    const start = { x: windCenter.x - Math.cos(angle) * halfLength, y: windCenter.y - Math.sin(angle) * halfLength };
+    const end = { x: windCenter.x + Math.cos(angle) * halfLength, y: windCenter.y + Math.sin(angle) * halfLength };
     ctx.strokeStyle = "rgba(255,255,255,.8)";
     ctx.fillStyle = "rgba(255,255,255,.8)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);
-    ctx.lineTo(end.x - 6 * Math.cos(angle - 0.5), end.y - 6 * Math.sin(angle - 0.5));
-    ctx.lineTo(end.x - 6 * Math.cos(angle + 0.5), end.y - 6 * Math.sin(angle + 0.5));
+    ctx.lineTo(end.x - 9 * Math.cos(angle - 0.5), end.y - 9 * Math.sin(angle - 0.5));
+    ctx.lineTo(end.x - 9 * Math.cos(angle + 0.5), end.y - 9 * Math.sin(angle + 0.5));
     ctx.closePath();
     ctx.fill();
-    ctx.font = "10px 'DM Mono', monospace";
-    ctx.fillText("WIND", 330, 79);
+    ctx.font = "500 14px 'DM Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("WIND", windCenter.x, attemptsRowY);
     const gust = Math.hypot(game.windGust?.x ?? 0, game.windGust?.y ?? 0);
+    ctx.font = "10px 'DM Mono', monospace";
     ctx.fillStyle = "rgba(102,216,235,.9)";
-    ctx.fillText(`GUST ±${gust.toFixed(0)}`, 380, 79);
+    ctx.fillText(`GUST ±${gust.toFixed(0)}`, 430, attemptsRowY);
     ctx.restore();
   }
 
@@ -270,19 +283,19 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.restore();
   }
 
-  function drawCursor(input) {
+  function drawCursor(input, color = "#e6534a", size = 14) {
     if (!input.point) return;
     ctx.beginPath();
-    ctx.arc(input.point.x, input.point.y, input.mode === "DRAW" ? 7 : 10, 0, Math.PI * 2);
-    ctx.fillStyle = input.mode === "DRAW" ? "#e6534a" : "rgba(255,255,255,.75)";
+    ctx.arc(input.point.x, input.point.y, input.mode === "DRAW" ? size / 2 : 10, 0, Math.PI * 2);
+    ctx.fillStyle = color;
     ctx.strokeStyle = "#263f4c";
     ctx.lineWidth = input.mode === "DRAW" ? 0 : 2;
     if (input.mode === "DRAW") ctx.fill();
     else ctx.stroke();
   }
 
-  function drawFreeDraw(freeInk, cameraActive) {
-    ctx.fillStyle = "rgba(7,18,29,.74)";
+  function drawFreeDraw(state, cameraActive) {
+    ctx.fillStyle = "#07121d";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (cameraActive && cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       ctx.save();
@@ -291,14 +304,22 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.drawImage(cameraVideo, 0, 0, WIDTH, HEIGHT);
       ctx.restore();
     } else {
-      ctx.fillStyle = "rgba(220,236,237,.12)";
+      ctx.fillStyle = "#b4c7d4";
       ctx.font = "20px 'DM Sans', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Enable your camera to draw over a live view", WIDTH / 2, HEIGHT / 2);
     }
     ctx.fillStyle = "rgba(7,18,29,.48)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    for (const stroke of freeInk) drawPath(stroke, "#ff6d68", 8);
+    for (const stroke of state.freeInk) {
+      if (stroke.points.length === 1) {
+        ctx.beginPath();
+        ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2);
+        ctx.fillStyle = stroke.color;
+        ctx.fill();
+      } else drawPath(stroke.points, stroke.color, stroke.size);
+    }
+    drawCursor(state.input, state.penColor, state.penSize);
     ctx.textAlign = "left";
     ctx.fillStyle = "#fff";
     ctx.font = "600 15px 'DM Sans', sans-serif";
@@ -337,7 +358,8 @@ export function createRenderer({ canvas, cameraVideo }) {
   }
 
   function render(state, cameraActive, now = performance.now()) {
-    const { game, input, connectionError, freeDraw, freeInk, autopilot, debug } = state;
+    updateCanvasResolution(canvas, ctx, window.devicePixelRatio || 1);
+    const { game, input, connectionError, freeDraw, autopilot, debug } = state;
     const replay = geminiReplay.frame(state, now);
     if (!game || connectionError) {
       drawBackground();
@@ -345,14 +367,10 @@ export function createRenderer({ canvas, cameraVideo }) {
       return;
     }
     if (freeDraw) {
-      drawFreeDraw(freeInk, cameraActive);
+      drawFreeDraw(state, cameraActive);
       return;
     }
     drawBackground();
-    ctx.fillStyle = "#578b70";
-    ctx.fillRect(game.pad.x - 33, game.pad.y + 14, 66, 9);
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.fillRect(game.pad.x - 40, game.pad.y + 24, 80, 3);
     drawDestination(game.star.x, game.star.y, game.starRadius);
     for (const cloud of replay?.clouds ?? game.clouds) drawCloud(cloud, debug);
 
@@ -389,6 +407,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.arc(game.plane.target.x, game.plane.target.y, 6, 0, Math.PI * 2);
       ctx.fill();
     }
+    drawStartZone(ctx, game, input);
     drawDrone(game.plane);
     if (replay) {
       ctx.save();

@@ -35,14 +35,14 @@ export function createGameClient({ onSnapshot, onError }) {
     onError(connectionError);
   }
 
-  async function syncGame() {
+  async function syncGame(inputEpoch) {
     if (!session || requestInFlight || connectionError || !pendingEvents.length) return;
     requestInFlight = true;
     const events = pendingEvents;
     pendingEvents = [];
     try {
       const result = await api("update", { session, events });
-      onSnapshot(result.game);
+      onSnapshot(result.game, inputEpoch);
     } catch (error) {
       failConnection(error);
     } finally {

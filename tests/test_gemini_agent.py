@@ -16,8 +16,9 @@ def proposal(points):
     return {"waypoints": [{"x": x, "y": y} for x, y in points]}
 
 
-SAFE_ROUTE = proposal([(90, 300), (240, 180), (480, 180), (680, 200), (840, 300)])
-DIRECT_ROUTE = proposal([(90, 300), (840, 300)])
+PAD = (game.PAD_MARGIN, 300)
+SAFE_ROUTE = proposal([PAD, (240, 180), (480, 180), (680, 200), (840, 300)])
+DIRECT_ROUTE = proposal([PAD, (840, 300)])
 
 
 class GeminiTests(unittest.TestCase):
@@ -65,6 +66,42 @@ class GeminiTests(unittest.TestCase):
                     gemini_agent.request_routes(self.layout, [], "secret-test-key", "gemini-2.5-flash")
                 self.assertNotIn("secret-test-key", str(caught.exception))
 
+    def test_prompt_contains_future_cloud_positions_including_bounces(self):
+        self.layout["clouds"][0].update(x=914, vx=150)
+        with patch("gemini_agent.urlopen", return_value=self.response([SAFE_ROUTE])) as call:
+            gemini_agent.request_routes(self.layout, [], "key", "gemini-test")
+        prompt = json.loads(call.call_args.args[0].data)["contents"][0]["parts"][0]["text"]
+        context = json.loads(prompt.split("\n", 1)[1])
+        forecast = context["future_cloud_positions"]
+        self.assertEqual(forecast[0]["positions"][0]["x"], 914)
+        self.assertEqual(forecast[1]["time"], 1)
+        self.assertEqual(forecast[1]["positions"][0]["x"], 767.5)
+
+    def test_predictive_repairs_feed_next_round_and_keep_verified_result_on_api_error(self):
+        self.layout["clouds"] = [{"x": 800, "y": 180, "r": 45, "vx": -60}]
+        self.layout["wind"] = (12, -4)
+        with patch("gemini_agent.request_routes", side_effect=[
+                [SAFE_ROUTE], gemini_agent.AgentError("offline")]) as request:
+            result = gemini_agent.build_benchmark(self.layout, "key", "gemini-test")
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["planner"], "gemini_predictive")
+        self.assertGreater(result["refined"], 0)
+        self.assertEqual(result["tested"], 1 + result["refined"])
+        feedback = request.call_args_list[1].args[1]
+        self.assertEqual(feedback[0]["state"], "CRASHED")
+        self.assertEqual(feedback[0]["collision"]["cloud_index"], 0)
+        self.assertEqual(feedback[-1]["source"], "predictive_refinement")
+        self.assertEqual(feedback[-1]["state"], "LANDED")
+        self.assertEqual(flight_sim.simulate(result["route"], self.layout)["trajectory"], result["trajectory"])
+
+    def test_two_rounds_keep_api_and_simulation_budgets(self):
+        self.layout["clouds"][0]["vx"] = -30
+        with patch("gemini_agent.request_routes", return_value=[DIRECT_ROUTE]) as request:
+            result = gemini_agent.build_benchmark(self.layout, "key", "gemini-test")
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(result["tested"], 2 + result["refined"])
+        self.assertLessEqual(result["refined"], 64)
+
     def test_malformed_blocked_and_oversized_responses_are_rejected(self):
         for body in (b"not json", b"{}", b'{"candidates": []}',
                      b'{"candidates": [{"finishReason": "MAX_TOKENS"}]}',
@@ -75,11 +112,11 @@ class GeminiTests(unittest.TestCase):
 
     def test_untrusted_waypoints_cannot_skip_start_or_leave_field(self):
         invalid = [proposal([(840, 300), (840, 300)]),
-                   proposal([(90, 300), (841, 400)]),
-                   proposal([(90, 300), (float("nan"), 200), (840, 300)]),
-                   proposal([(90, 300), (True, 200), (840, 300)]),
-                   proposal([(90, 300), (400, -1), (840, 300)]),
-                   {"waypoints": []}, proposal([(90, 300)] * 17)]
+                   proposal([PAD, (841, 400)]),
+                   proposal([PAD, (float("nan"), 200), (840, 300)]),
+                   proposal([PAD, (True, 200), (840, 300)]),
+                   proposal([PAD, (400, -1), (840, 300)]),
+                   {"waypoints": []}, proposal([PAD] * 17)]
         for value in invalid:
             with self.subTest(value=value), self.assertRaises(ValueError):
                 gemini_agent.validate_route(value, self.layout)
@@ -186,7 +223,7 @@ class GeminiTests(unittest.TestCase):
         elapsed = session.game.flight_ticks * flight_sim.STEP
         for factor, verdict in ((1.1, "beat"), (0.8, "chasing")):
             job.result = {"status": "ready", "time": elapsed * factor, "distance": 800,
-                          "model": "gemini-test", "tested": 3, "trajectory": [(90, 300), (840, 300)]}
+                          "model": "gemini-test", "tested": 3, "trajectory": [PAD, (840, 300)]}
             snapshot = session.snapshot()
             self.assertEqual(snapshot["comparison"]["verdict"], verdict)
             self.assertEqual(snapshot["comparison"]["matchPercent"], round(factor * 100, 1))

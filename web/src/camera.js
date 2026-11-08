@@ -1,4 +1,4 @@
-export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, setInputMode, setStatus, showToast }) {
+export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, setInputMode, setStatus, showToast, isFreeDraw = () => false }) {
   const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
   const MEDIAPIPE_VERSION = "1.2.2";
 
@@ -84,12 +84,14 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
       handTrackingStarting = false;
       cameraError = "";
       setInputMode("HAND");
-      setStatus("Draw a route from the drone with one finger, then hold up two fingers to launch. Tracking gaps pause your route.");
+      setStatus(isFreeDraw()
+        ? "Free draw: one finger draws; two or more change color. U undoes, C clears; Esc or P returns."
+        : "Draw a route from the drone with one finger, then hold up two or more fingers to launch. Tracking gaps pause your route.");
     } catch (error) {
       if (request !== cameraRequest) return;
       cameraError = error instanceof Error ? error.message : String(error);
       setInputMode("OFF");
-      setStatus("Hand tracking could not start. Check camera access, then enable hand tracking to try again.");
+      setStatus("Hand tracking could not start. Check camera access, then select Start to try again.");
       showToast(`Camera/hand tracking unavailable: ${cameraError}`);
     }
   }

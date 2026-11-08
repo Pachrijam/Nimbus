@@ -26,7 +26,11 @@ const ui = createUI({
   toast: document.querySelector("#toast"),
 });
 const client = createGameClient({
-  onSnapshot: (snapshot) => ui.applySnapshot(state, snapshot),
+  onSnapshot(snapshot, inputEpoch) {
+    const acceptInput = inputEpoch === state.inputEpoch;
+    ui.applySnapshot(state, snapshot, acceptInput);
+    if (acceptInput) controls.updateFreeDraw();
+  },
   onError(message) {
     state.connectionError = message;
     state.input.mode = "IDLE";
@@ -39,6 +43,7 @@ const camera = createHandTracking({
   cameraVideo,
   cameraPreview: document.querySelector("#camera-preview"),
   getInputMode: () => state.selectedInput,
+  isFreeDraw: () => state.freeDraw,
   setInputMode: (mode) => controls.setInputMode(mode),
   setStatus: ui.setStatus,
   showToast: ui.showToast,
@@ -67,13 +72,12 @@ function frame(now) {
         event.cameraAspect = camera.aspectRatio;
       } catch (error) {
         controls.setInputMode("OFF");
-        ui.setStatus("Hand tracking stopped. Enable hand tracking to try again.");
+        ui.setStatus("Hand tracking stopped. Select Start to try again.");
         ui.showToast(`Hand tracking stopped: ${error.message}`);
       }
     }
     client.queueEvent(event);
-    controls.updateFreeDraw();
-    client.syncGame();
+    client.syncGame(state.inputEpoch);
   }
   renderer.render(state, camera.active);
   requestAnimationFrame(frame);

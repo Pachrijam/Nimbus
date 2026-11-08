@@ -5,6 +5,7 @@ import paths
 import physics
 
 STEP = 1 / 60
+MAX_SECONDS = 30
 STAR_RADIUS = 28
 SCREEN_MARGIN = 30
 
@@ -20,10 +21,8 @@ def wind_at(wind, gust, elapsed, gust_period):
     )
 
 
-def advance(plane, route, wind, clouds, star, width, height, *, elapsed=0.0,
-            gust=(0.0, 0.0), gust_period=4.0):
-    """Advance one tick, mutating only the supplied plane and cloud copies."""
-    physics.step_plane(plane, route, wind_at(wind, gust, elapsed, gust_period), STEP)
+def advance_clouds(clouds, width, height):
+    """Shared storm motion for live flights, forecasts, and route verification."""
     for cloud in clouds:
         cloud["x"] += cloud["vx"] * STEP
         cloud["y"] += cloud.get("vy", 0.0) * STEP
@@ -40,6 +39,25 @@ def advance(plane, route, wind, clouds, star, width, height, *, elapsed=0.0,
             cloud["y"] = height - cloud["r"]
             cloud["vy"] = -abs(cloud.get("vy", 0.0))
 
+
+def forecast_clouds(layout, *, seconds=MAX_SECONDS, stride=60):
+    """Detached future positions, including the same discrete bounces as the game."""
+    clouds = [dict(c) for c in layout["clouds"]]
+    frames = [{"time": 0.0, "clouds": [dict(c) for c in clouds]}]
+    ticks = int(seconds / STEP)
+    for tick in range(1, ticks + 1):
+        advance_clouds(clouds, layout["width"], layout["height"])
+        if tick % stride == 0 or tick == ticks:
+            frames.append({"time": tick * STEP, "clouds": [dict(c) for c in clouds]})
+    return frames
+
+
+def advance(plane, route, wind, clouds, star, width, height, *, elapsed=0.0,
+            gust=(0.0, 0.0), gust_period=4.0):
+    """Advance one tick, mutating only the supplied plane and cloud copies."""
+    physics.step_plane(plane, route, wind_at(wind, gust, elapsed, gust_period), STEP)
+    advance_clouds(clouds, width, height)
+
     position = (plane["x"], plane["y"])
     if paths.distance(position, star) <= STAR_RADIUS:
         return "LANDED"
@@ -51,7 +69,7 @@ def advance(plane, route, wind, clouds, star, width, height, *, elapsed=0.0,
     return "FLYING"
 
 
-def simulate(route, layout, max_seconds=30):
+def simulate(route, layout, max_seconds=MAX_SECONDS, *, diagnostics=False):
     """Evaluate an already smoothed route from the original level conditions."""
     plane = physics.make_plane(*layout["pad"])
     clouds = [dict(c) for c in layout["clouds"]]
@@ -59,15 +77,31 @@ def simulate(route, layout, max_seconds=30):
     distance = 0.0
     gust = layout.get("wind_gust", (0.0, 0.0))
     gust_period = layout.get("gust_period", 4.0)
-    for tick in range(int(max_seconds / STEP)):
+    encounters = [None for _ in clouds]
+    collision = None
+    for tick in range(1, int(max_seconds / STEP) + 1):
         state = advance(plane, route, layout["wind"], clouds, layout["star"],
-                        layout["width"], layout["height"], elapsed=tick * STEP,
+                        layout["width"], layout["height"], elapsed=(tick - 1) * STEP,
                         gust=gust, gust_period=gust_period)
         position = (plane["x"], plane["y"])
         distance += paths.distance(trajectory[-1], position)
         trajectory.append(position)
+        if diagnostics:
+            for index, cloud in enumerate(clouds):
+                clearance = paths.distance(position, (cloud["x"], cloud["y"])) - cloud["r"]
+                encounter = {"cloud_index": index, "time": tick * STEP,
+                             "clearance": clearance, "cloud_position": (cloud["x"], cloud["y"]),
+                             "drone_position": position, "heading": plane["heading"]}
+                if encounters[index] is None or clearance < encounters[index]["clearance"]:
+                    encounters[index] = encounter
+                if state == "CRASHED" and clearance <= 0 and collision is None:
+                    collision = encounter
         if state != "FLYING":
-            return {"state": state, "time": (tick + 1) * STEP, "distance": distance,
-                    "trajectory": trajectory}
-    return {"state": "TIMEOUT", "time": max_seconds, "distance": distance,
-            "trajectory": trajectory}
+            break
+    else:
+        state = "TIMEOUT"
+    result = {"state": state, "time": (len(trajectory) - 1) * STEP,
+              "distance": distance, "trajectory": trajectory}
+    if diagnostics:
+        result.update(collision=collision, encounters=[item for item in encounters if item is not None])
+    return result
