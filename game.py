@@ -328,7 +328,14 @@ class Game:
         elif self.state == "LANDED":
             result = self.comparison()
             if result["status"] == "ready":
-                message = f"Gemini match: {result['matchPercent']:.0f}% | R: retry  N: next"
+                gap = abs(result["timeDelta"])
+                if gap < 0.005:
+                    outcome = "You tied Gemini!"
+                elif result["timeDelta"] < 0:
+                    outcome = f"You beat Gemini by {gap:.2f} s!"
+                else:
+                    outcome = f"Gemini finished {gap:.2f} s ahead"
+                message = f"{outcome} | R: retry  N: next"
             elif result["status"] == "pending":
                 message = "Delivered! Gemini planning... R: retry  N: next"
             elif result["status"] == "disabled":

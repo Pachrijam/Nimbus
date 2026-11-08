@@ -53,7 +53,24 @@ def main():
       const replayButton = document.querySelector('#gemini-replay');
       check(replayButton.disabled, 'cannot replay while planning');
       ui.applySnapshot(state,snapshot); check(!panel.classList.contains('hidden'),'visible');
-      check(document.querySelector('#match-percent').textContent === '100.0%','score');
+      check(document.querySelector('#time-gap').textContent === '0.00 s','tied gap');
+      check(document.querySelector('#comparison-title').textContent === 'You and Gemini finished in the same time!','tied outcome');
+      for (const [delta, verdict, title, badge] of [
+        [-1.2, 'beat', 'You beat Gemini by 1.20 seconds!', 'You win!'],
+        [2, 'chasing', 'Gemini finished 2.00 seconds ahead', 'Gemini wins'],
+        [0.2, 'matched', 'Gemini finished 0.20 seconds ahead', 'Nearly tied'],
+      ]) {
+        const comparison = {...snapshot.comparison, aiTime:10, playerTime:10+delta, timeDelta:delta, verdict};
+        ui.applySnapshot(state,{...snapshot,comparison});
+        check(document.querySelector('#comparison-title').textContent === title,'winner and time gap');
+        check(document.querySelector('#match-badge').textContent === badge,'accurate result badge');
+        check(!panel.textContent.includes('%'),'no percentage to decode');
+        if (delta > 0) check(document.querySelector('#comparison-message').textContent.includes('Finish under 10.00 s'),'clear retry target');
+        check(document.documentElement.scrollWidth <= innerWidth,'outcome fits viewport');
+      }
+      ui.applySnapshot(state,pending);
+      check(document.querySelector('#time-gap').textContent.codePointAt(0) === 8212,'pending clears old gap');
+      check(document.querySelector('#comparison-title').textContent === 'Your flight vs. Gemini','pending clears old winner');
       ui.applySnapshot(state,{...snapshot,comparison:{...snapshot.comparison,planner:'gemini_predictive',refined:12,tested:14}});
       check(document.querySelector('#comparison-note').textContent.includes('Gemini + predictive cloud planning'), 'refined route attribution');
       check(document.querySelector('#comparison-note').textContent.includes('12 time-aware refinements'), 'refinement count');

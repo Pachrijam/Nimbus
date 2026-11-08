@@ -123,9 +123,10 @@ Successful flights now stay on the results screen. Gemini proposes routes for
 the same level, and Python flies each proposal through the same fixed-step
 physics, wind, and moving clouds as the player. The fastest successful proposal
 becomes the benchmark. Both actual flight paths appear on the field; the results
-show flight times, your best time on this level, and AI performance
-(`Gemini flight time / your flight time * 100`). A result above 100% beats Gemini;
-95–100% matches its performance. This is the **best verified route**, including
+lead with who finished faster and the time difference in seconds. Both flight
+times, the time gap, and your best time on this level appear below. Close finishes
+are labeled "Nearly tied" while the headline still shows who was faster.
+This is the **best verified route**, including
 predictive refinements on moving-cloud levels, not
 a mathematically guaranteed optimal path. Gemini's machine learning generates
 the routes; the simulator computes every metric, not the model.

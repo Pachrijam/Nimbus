@@ -80,15 +80,15 @@
           <div class="comparison-heading">
             <div>
               <p class="eyebrow">Delivery complete</p>
-              <h2 id="comparison-title">Your flight vs. Gemini</h2>
+              <h2 id="comparison-title" role="status" aria-live="polite">Your flight vs. Gemini</h2>
             </div>
             <span class="match-badge" id="match-badge">Planning...</span>
           </div>
-          <p id="comparison-message" class="comparison-message" role="status" aria-live="polite"></p>
+          <p id="comparison-message" class="comparison-message"></p>
           <dl class="comparison-metrics">
             <div><dt>Your flight</dt><dd id="player-time">—</dd></div>
             <div id="ai-time-metric"><dt>Gemini's flight</dt><dd id="ai-time">—</dd></div>
-            <div id="ai-performance-metric"><dt>AI performance</dt><dd id="match-percent">—</dd></div>
+            <div id="time-gap-metric"><dt>Time gap</dt><dd id="time-gap">—</dd></div>
             <div><dt>Your best this level</dt><dd id="best-time">—</dd></div>
           </dl>
           <p class="route-legend" id="route-legend"><span class="player-line" aria-hidden="true"></span> Your flight <span class="ai-line" aria-hidden="true"></span> Gemini's flight (dashed)</p>

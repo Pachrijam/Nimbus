@@ -104,9 +104,9 @@ export function createRenderer({ canvas, cameraVideo }) {
   function drawDestination(x, y, radius) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.shadowColor = "rgba(255,191,76,.6)";
+    ctx.shadowColor = "rgba(239,68,68,.6)";
     ctx.shadowBlur = 22;
-    ctx.fillStyle = "#ffc758";
+    ctx.fillStyle = "#ef4444";
     ctx.beginPath();
     ctx.moveTo(0, radius);
     ctx.bezierCurveTo(-radius * 0.35, radius * 0.55, -radius * 0.8, 0, -radius * 0.8, -radius * 0.3);
@@ -115,10 +115,10 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.closePath();
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = "rgba(133,86,20,.55)";
+    ctx.strokeStyle = "rgba(153,27,27,.7)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    ctx.fillStyle = "#fff8e8";
+    ctx.fillStyle = "#fff1f2";
     ctx.beginPath();
     ctx.arc(0, -radius * 0.3, radius * 0.3, 0, Math.PI * 2);
     ctx.fill();

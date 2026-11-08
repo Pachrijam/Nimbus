@@ -18,29 +18,34 @@ export function createUI({ canvas, statusText, toast }) {
     write("best-time", `${result.bestTime.toFixed(2)} s`);
     const ready = result.status === "ready";
     const disabled = result.status === "disabled";
-    write("comparison-title", disabled ? "Delivery complete" : "Your flight vs. Gemini");
+    let title = disabled ? "Delivery complete" : "Your flight vs. Gemini";
     write("retry-label", disabled ? "Retry this level" : "Try to beat Gemini");
-    for (const id of ["ai-time-metric", "ai-performance-metric", "route-legend", "gemini-replay"]) {
+    for (const id of ["ai-time-metric", "time-gap-metric", "route-legend", "gemini-replay"]) {
       document.querySelector(`#${id}`).classList.toggle("hidden", disabled);
     }
     write("ai-time", ready ? `${result.aiTime.toFixed(2)} s` : "—");
-    write("match-percent", ready ? `${result.matchPercent.toFixed(1)}%` : "—");
-    const badges = { beat: "You beat Gemini!", matched: "AI performance matched", chasing: "Chase Gemini" };
-    write("match-badge", ready ? badges[result.verdict] : result.status === "pending" ? "Planning..." : disabled ? "Delivered!" : "AI unavailable");
+    const gap = ready ? Math.abs(result.timeDelta).toFixed(2) : null;
+    const tied = ready && gap === "0.00";
+    write("time-gap", ready ? `${gap} s` : "—");
+    const badges = { beat: "You win!", matched: "Nearly tied", chasing: "Gemini wins" };
+    write("match-badge", ready ? tied ? "Tied" : badges[result.verdict] : result.status === "pending" ? "Planning..." : disabled ? "Delivered!" : "AI unavailable");
     let message = result.message;
     if (ready) {
-      const gap = Math.abs(result.timeDelta).toFixed(2);
-      message = result.verdict === "beat"
-        ? `You delivered ${gap} s faster than Gemini. Can you improve your record?`
-        : result.timeDelta <= 0.01
-          ? "You matched Gemini's flight time. Try another route or take on the next mission."
-          : `Gemini delivered ${gap} s faster. Study the dashed route and try again.`;
+      title = tied
+        ? "You and Gemini finished in the same time!"
+        : result.timeDelta < 0
+          ? `You beat Gemini by ${gap} seconds!`
+          : `Gemini finished ${gap} seconds ahead`;
+      message = result.timeDelta < 0 && !tied
+        ? "Lower time wins. Can you improve your record?"
+        : `Lower time wins. Finish under ${result.aiTime.toFixed(2)} s to beat Gemini.`;
     }
+    write("comparison-title", title);
     write("comparison-message", message);
     const planner = result.planner === "gemini_predictive"
       ? "Gemini + predictive cloud planning. " : "";
     write("comparison-note", ready
-      ? `${planner}Best of ${result.tested} simulated routes (${result.refined ?? 0} time-aware refinements), not a guaranteed optimum. AI performance = Gemini time ÷ your time; 100% is equal, above 100% is faster. Matched means within 5% of AI performance.`
+      ? `${planner}Best of ${result.tested} simulated routes (${result.refined ?? 0} time-aware refinements), not a guaranteed optimum. Both flights use the same wind, moving storms, and flight physics.`
       : disabled
         ? "Your score and best flight time are saved for this level. Press N or choose Next level to continue."
         : "Gemini's routes are tested with the same wind, moving storms, and flight physics. Your delivery is saved for this level.");
