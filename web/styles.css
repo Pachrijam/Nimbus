@@ -86,16 +86,19 @@ h1 span { color: #8ca2b6; }
 .icon-button.active { color: var(--mint); background: rgba(120, 226, 189, .1); }
 .toolbar-divider { width: 1px; height: 20px; margin: 0 5px; background: var(--line); }
 
-.tool-button.start-game-button {
+.tool-button.start-game-button,
+.tool-button.stop-camera-button {
   min-height: 48px;
   padding: 0 24px;
-  border-color: var(--mint);
   border-radius: 8px;
-  background: var(--mint);
-  color: #081321;
   font-size: 16px;
   font-weight: 700;
   white-space: nowrap;
+}
+.tool-button.start-game-button {
+  border-color: var(--mint);
+  background: var(--mint);
+  color: #081321;
   box-shadow: 0 4px 18px rgba(120, 226, 189, .22);
 }
 .tool-button.start-game-button:hover { border-color: #a0f0d3; background: #a0f0d3; color: #081321; }
@@ -169,7 +172,7 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
   .intro-copy { font-size: 12px; }
   .toolbar { padding: 7px; flex-wrap: wrap; }
   .input-controls { width: 100%; }
-  .start-game-button { width: 100%; }
+  .start-game-button, .stop-camera-button { width: 100%; }
   .tool-button { padding: 0 7px; font-size: 10px; }
   .tool-button span { margin-right: 2px; }
   .panel-footer { align-items: start; flex-direction: column; gap: 8px; }
