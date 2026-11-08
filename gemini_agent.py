@@ -52,10 +52,13 @@ def request_routes(layout, feedback, api_key, model):
         "Propose 4 to 6 diverse routes as JSON. Each waypoints list includes the exact pad "
         "and star as its first and last point, with 0 to 14 intermediate points inside the field. "
         "Coordinates are pixels: x right, y down. Clouds are circular collision zones; their "
-        "x moves at vx pixels/second and bounces when the circle reaches the field edges. "
-        "Clouds start moving only at launch. Wind is constant velocity added to drone motion. "
+        "x and y move at vx and vy pixels/second, bouncing when the circle reaches a field edge. "
+        "Clouds start moving only at launch. Wind is a base velocity plus a deterministic "
+        "sinusoidal gust: x adds gust_x*sin(2*pi*time/period), y adds "
+        "gust_y*cos(2*pi*time/period), all in pixels/second. "
         "The drone starts heading right. Routes undergo two Chaikin smoothing passes and "
-        "8px resampling before pure-pursuit flight. Leave clearance for turn limits and "
+        "4px jitter filtering, two Chaikin passes, and 8px resampling before pure-pursuit flight. "
+        "Leave clearance for turn limits and "
         "corner cutting. Explore above and below obstacles, with gradual turns. "
         "Plan crossings using the supplied future_cloud_positions (seconds since launch), "
         "not only the clouds' initial positions. Estimate your arrival times with wind and turns. "
@@ -125,7 +128,7 @@ def validate_route(candidate, layout):
     if paths.distance(raw[0], layout["pad"]) > 1 or paths.distance(raw[-1], layout["star"]) > 1:
         raise ValueError("Route must connect the pad and destination")
     raw[0], raw[-1] = tuple(layout["pad"]), tuple(layout["star"])
-    return paths.resample(paths.chaikin(raw))
+    return paths.flight_path(raw)
 
 
 def simulation_feedback(node, source="gemini"):

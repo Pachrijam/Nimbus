@@ -225,7 +225,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.font = "700 36px 'Space Grotesk', sans-serif";
     ctx.fillText(String(game.level).padStart(2, "0"), 32, 79, 100);
 
-    roundedRect(ctx, 158, 17, 260, 76, 8);
+    roundedRect(ctx, 158, 17, 320, 76, 8);
     ctx.fillStyle = "rgba(10,31,43,.75)";
     ctx.fill();
     const scoreRowY = 38;
@@ -260,6 +260,10 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.font = "500 14px 'DM Mono', monospace";
     ctx.textAlign = "center";
     ctx.fillText("WIND", windCenter.x, attemptsRowY);
+    const gust = Math.hypot(game.windGust?.x ?? 0, game.windGust?.y ?? 0);
+    ctx.font = "10px 'DM Mono', monospace";
+    ctx.fillStyle = "rgba(102,216,235,.9)";
+    ctx.fillText(`GUST ±${gust.toFixed(0)}`, 430, attemptsRowY);
     ctx.restore();
   }
 

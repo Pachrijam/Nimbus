@@ -100,6 +100,18 @@ class GestureTests(unittest.TestCase):
         self.assertGreaterEqual(moved[0] - start[0], 40)
         self.assertLessEqual(moved[0] - start[0], 60)
 
+    def test_smoothing_reduces_small_hand_jitter(self):
+        self.sample(hand(), 3)
+        offsets = (0, 0.002, -0.002, 0.001, -0.001, 0, 0.002, -0.002)
+        raw_x = [gestures.to_screen(0.45 + offset, gestures.ZONE_LEFT,
+                                    gestures.ZONE_RIGHT, 600) for offset in offsets]
+        filtered_x = [
+            self.sample(hand(offset=offset))[1][0]
+            for offset in offsets[1:]
+        ]
+
+        self.assertLess(max(filtered_x) - min(filtered_x), max(raw_x) - min(raw_x))
+
     def test_explicit_reset_clears_tracking_immediately(self):
         self.sample(hand(), 3)
         gestures.reset_gesture(self.tracker)
