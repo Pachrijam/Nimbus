@@ -234,4 +234,4 @@ python -m unittest discover -s tests -v
 - **[STEPS.md](STEPS.md):** exactly what each person does, in order, with checkpoints
 
 ## Credits
-Hand tracking: Google MediaPipe HandLandmarker. Built at HackRPI 2026 by Avyay, Paul and Person 3.
+Hand tracking: Google MediaPipe HandLandmarker. Built at HackRPI 2026 by Avyay, Paul and Harry.

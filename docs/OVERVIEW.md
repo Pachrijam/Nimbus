@@ -1,6 +1,6 @@
 # OVERVIEW: Nimbus Flight Path
 
-**HackRPI 2026 · Theme: "In The Clouds" · Team: Avyay, Paul, Person 3**
+**HackRPI 2026 · Theme: "In The Clouds" · Team: Avyay, Paul, Harry**
 
 > **Sketch a drone's route in the air with one finger. A physics simulation instantly shows whether the drone can actually fly it through the wind and around the storms.**
 
@@ -144,11 +144,11 @@ webcam ─> main.py ─> MediaPipe ─> gestures.get_gesture() ─> (mode, point
 |---|---|---|
 | `main.py` | shared (announce changes) | camera, MediaPipe, clock, input, keys, mode switching |
 | `gestures.py` | **Avyay** | finger-up checks, debouncing, smoothing |
-| `physics.py` | **Avyay** (`step_exact`: Person 3) | pure pursuit, turn limit, wind |
+| `physics.py` | **Avyay** (`step_exact`: Harry) | pure pursuit, turn limit, wind |
 | `freedraw.py` | **Paul** | free-draw mode |
 | `visuals.py` | **Paul** | all rendering and effects |
-| `game.py` | **Person 3** | states, collisions, levels, score |
-| `paths.py` | **Person 3** | Chaikin, resampling, path length, feasibility check |
+| `game.py` | **Harry** | states, collisions, levels, score |
+| `paths.py` | **Harry** | Chaikin, resampling, path length, feasibility check |
 
 ### Interfaces (do not change without telling the team)
 - `get_gesture(landmarks, w, h) -> (mode, point)`: mode is `"DRAW"`, `"HOVER"` or `"IDLE"`; point is `(x, y)` ints or `None`.

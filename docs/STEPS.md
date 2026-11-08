@@ -20,9 +20,9 @@ Check items off as you go. Times are targets, not suggestions.
    git remote add origin https://github.com/YOUR-USERNAME/aircanvas.git
    git push -u origin main
    ```
-5. On GitHub: **Settings → Collaborators → Add people** → add Paul and Person 3.
+5. On GitHub: **Settings → Collaborators → Add people** → add Paul and Harry.
 
-### Paul and Person 3
+### Paul and Harry
 1. Accept the GitHub invite (email or github.com notifications).
 2. In a terminal, in the folder where you want the project:
    ```
@@ -79,7 +79,7 @@ git push
 | 4 | Debounce with `state["candidate"]` / `state["count"]` / `DEBOUNCE_FRAMES` | No flicker when your hand is still |
 | 5 | Smoothing with `state["smooth"]`, `SMOOTHING` | Cursor moves smoothly; no jitter when your hand is still |
 | 6 | Reset `state["smooth"] = None` when no hand; first frame back sets smooth = raw | No line glides in from the old position |
-| 7 | **Commit + push.** Tell Person 3 and Paul: "hand input ready" | They can turn mouse mode off |
+| 7 | **Commit + push.** Tell Harry and Paul: "hand input ready" | They can turn mouse mode off |
 
 ### Physics (`physics.py` → `step_pursuit`), ~2:00 → 6:30
 Test with mouse mode in the game. **Each step: run, watch, commit.**
@@ -93,10 +93,10 @@ Test with mouse mode in the game. **Each step: run, watch, commit.**
 | 6 | After the last point: stop steering, fly straight | Drone continues past a short path instead of spinning |
 | 7 | Wind is already in the movement; set `self.wind = (30, 0)` in `game.py` to test | Drone drifts but keeps correcting back to the path |
 | 8 | Tune `LOOKAHEAD`, `K_STEER`, `MAX_TURN` (table in OVERVIEW.md) | Smooth curves, no oscillation, hairpins fail |
-| 9 | Test `USE_PHYSICS = False` once Person 3's `step_exact` exists | Fallback works |
+| 9 | Test `USE_PHYSICS = False` once Harry's `step_exact` exists | Fallback works |
 
 ### Help others: 6:30 → 7:30
-Tune difficulty with Person 3, test gestures in bad lighting, fix bugs.
+Tune difficulty with Harry, test gestures in bad lighting, fix bugs.
 
 ---
 
@@ -119,14 +119,14 @@ Tune difficulty with Person 3, test gestures in bad lighting, fix bugs.
 | 5 | `draw_route` | Each segment white, **red where `tight_flags` is True** (impossible turn) |
 | 6 | `draw_trail` | Fading contrail (older points thinner/lighter) |
 | 7 | `draw_hud` | Clean panel: level, score, tries, wind arrow + speed |
-| 8 | Crash effect | Spin + puff at the crash point for ~1 s (add a function; ask Person 3 to call it) |
+| 8 | Crash effect | Spin + puff at the crash point for ~1 s (add a function; ask Harry to call it) |
 | 9 | Delivered effect | Flash/ring at the destination |
 | 10 | Wind streaks | Faint lines drifting in the wind direction |
 | 11 | Title screen text + level banner | "Level 3: Gusty" style |
 
 ---
 
-## 4. Person 3
+## 4. Harry
 
 ### Game core (`game.py` + `paths.py`), 11:20 → 3:30, **mouse mode the whole time**
 | # | Step | Done when |
@@ -157,7 +157,7 @@ Tune difficulty with Person 3, test gestures in bad lighting, fix bugs.
 ## 5. Checkpoints (everyone stops for 5 minutes)
 
 ### 1:30
-- [ ] Hand modes work (Avyay) · Free draw works (Paul) · Game loop works with the mouse (Person 3)
+- [ ] Hand modes work (Avyay) · Free draw works (Paul) · Game loop works with the mouse (Harry)
 - If any is badly behind: the others help it **now**.
 
 ### 3:30 (critical)
@@ -179,13 +179,13 @@ Tune difficulty with Person 3, test gestures in bad lighting, fix bugs.
 1. **Test in the Great Hall** (the actual demo room): lighting, distance from the camera, 5 full games.
 2. Fix the worst bug found. Commit.
 3. **Record the final demo video** (1–2 min): free draw → a successful delivery → a red too-tight turn → a failed route → autopilot view (`v`).
-4. Person 3: Devpost draft (Section 7).
+4. Harry: Devpost draft (Section 7).
 5. Everyone: `git pull`, confirm the latest version runs on **all three laptops**.
 6. Agree on Sunday: who arrives at 5:00, which extras to try.
 
 ---
 
-## 7. Devpost (Person 3 drafts Saturday, final Sunday by 8:45)
+## 7. Devpost (Harry drafts Saturday, final Sunday by 8:45)
 1. devpost.com → HackRPI 2026 → **Register / Join** → **Create project**; add teammates.
 2. Fill in (text from OVERVIEW.md):
    - **Tagline:** "Sketch a drone route in the air. Physics tells you if it can fly it."
