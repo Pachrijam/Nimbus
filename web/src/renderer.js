@@ -219,7 +219,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.strokeStyle = "rgba(255,255,255,.27)";
     ctx.stroke();
     ctx.fillStyle = text === "DELIVERED!" ? "#ffda8b" : "#fff";
-    ctx.font = "600 30px 'Space Grotesk', sans-serif";
+    ctx.font = "600 30px 'DM Sans', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(text, WIDTH / 2, HEIGHT / 2 + 10);
     ctx.restore();
@@ -411,7 +411,7 @@ export function createRenderer({ canvas, cameraVideo }) {
 
     if (debug) {
       ctx.fillStyle = "#0a1926";
-      ctx.font = "12px 'DM Mono', monospace";
+      ctx.font = "12px 'DM Sans', sans-serif";
       ctx.fillText(`${game.state} · ${input.mode} · ${input.mode === "DRAW" ? "drawing" : "idle"}`, 18, HEIGHT - 17);
     }
   }
