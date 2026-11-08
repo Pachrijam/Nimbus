@@ -1,6 +1,7 @@
 import { WIDTH, HEIGHT } from "./config.js";
 import { createGeminiReplay } from "./replay.js";
 import { updateCanvasResolution } from "./canvas-resolution.js";
+import { drawStartZone } from "./start-zone.js";
 
 export function createRenderer({ canvas, cameraVideo }) {
   const ctx = canvas.getContext("2d");
@@ -394,6 +395,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.arc(game.plane.target.x, game.plane.target.y, 6, 0, Math.PI * 2);
       ctx.fill();
     }
+    drawStartZone(ctx, game, input);
     drawDrone(game.plane);
     if (replay) {
       ctx.save();
