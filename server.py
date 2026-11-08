@@ -72,6 +72,7 @@ class Session:
             "preview": list(map(point, preview)),
             "tight": paths.find_tight_turns(preview, physics.SPEED / physics.MAX_TURN),
             "starRadius": game.STAR_RADIUS,
+            "startRadius": game.START_RADIUS,
             "comparison": flight.comparison(),
             "fieldWidth": flight.w,
             "launchClouds": [dict(c) for c in flight.cloud_layout] if flight.state == "LANDED" else [],
