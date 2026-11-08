@@ -15,7 +15,7 @@ export function drawStartZone(ctx, game, input) {
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle = "#183f38";
-  ctx.font = "600 11px 'DM Sans', sans-serif";
+  ctx.font = "600 11px 'Manrope', sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("START HERE", x, y + radius + 19);
   ctx.restore();

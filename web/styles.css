@@ -1,8 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Rajdhani:wght@500;600&family=Space+Grotesk:wght@700&display=swap");
 
 :root {
   color-scheme: dark;
-  --ui-font: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ui-font: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-family: var(--ui-font);
   background: #081321;
   color: #edf4fa;
@@ -61,13 +61,13 @@ button { font: inherit; }
 .eyebrow {
   margin: 0 0 9px;
   color: var(--mint);
-  font: 600 12px "DM Sans", sans-serif;
+  font: 600 12px "Manrope", sans-serif;
   letter-spacing: .04em;
 }
 
 h1 {
   margin: 0;
-  font: 600 clamp(24px, 3vw, 34px)/1.2 "DM Sans", sans-serif;
+  font: 600 clamp(24px, 3vw, 34px)/1.2 "Manrope", sans-serif;
   letter-spacing: -.025em;
 }
 
@@ -88,11 +88,15 @@ h1 span { color: #8ca2b6; }
 
 .tool-button.start-game-button,
 .tool-button.stop-camera-button {
-  min-height: 48px;
-  padding: 0 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
   border-radius: 8px;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   white-space: nowrap;
 }
 .tool-button.start-game-button {
@@ -104,10 +108,12 @@ h1 span { color: #8ca2b6; }
 .tool-button.start-game-button:hover { border-color: #a0f0d3; background: #a0f0d3; color: #081321; }
 .tool-button.start-game-button.active { border-color: var(--mint); background: #203f3b; color: var(--mint); box-shadow: none; }
 .tool-button.start-game-button.active:hover { background: #2b5149; }
-.tool-button.start-game-button kbd { border: 2px solid currentColor; color: inherit; }
-.tool-button.stop-camera-button { border-color: #b91c1c; background: #b91c1c; color: #fff; }
-.tool-button.stop-camera-button:hover { border-color: #991b1b; background: #991b1b; color: #fff; }
-.tool-button.stop-camera-button kbd { border: 2px solid currentColor; color: inherit; }
+.tool-button.start-game-button kbd,
+.tool-button.stop-camera-button kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 21px; height: 21px; margin-left: 4px; padding: 0; border: 1px solid currentColor; border-radius: 4px; color: inherit; background: transparent; font: 600 11px/1 var(--ui-font); letter-spacing: 0; }
+.tool-button.start-game-button span,
+.tool-button.stop-camera-button span { margin-right: 0; font-size: 14px; }
+.tool-button.stop-camera-button { border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.07); color: #fda4af; }
+.tool-button.stop-camera-button:hover { border-color: #fb7185; background: rgba(251,113,133,.14); color: #ffe4e6; }
 
 .canvas-wrap { position: relative; overflow: hidden; background: #dceaf0; }
 .free-draw-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); color: #aab9c7; font-size: 12px; }
@@ -122,7 +128,7 @@ button:disabled { opacity: .45; cursor: default; }
 #game-canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; cursor: crosshair; touch-action: none; }
 .camera-preview { position: absolute; top: 14px; right: 14px; width: min(20%, 180px); overflow: hidden; aspect-ratio: 4 / 3; border: 1px solid rgba(255,255,255,.8); border-radius: 7px; background: #071321; box-shadow: 0 5px 20px rgba(0,0,0,.24); }
 .camera-preview video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-.camera-label { position: absolute; right: 6px; bottom: 6px; display: flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 4px; background: rgba(5, 15, 25, .75); color: white; font: 500 10px "DM Sans", sans-serif; letter-spacing: .08em; }
+.camera-label { position: absolute; right: 6px; bottom: 6px; display: flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 4px; background: rgba(5, 15, 25, .75); color: white; font: 500 10px "Manrope", sans-serif; letter-spacing: .08em; }
 .live-dot { width: 5px; height: 5px; }
 .hidden { display: none !important; }
 .toast { position: absolute; left: 50%; bottom: 17px; transform: translateX(-50%); max-width: calc(100% - 30px); padding: 9px 13px; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; background: rgba(7, 19, 32, .88); color: white; font-size: 12px; text-align: center; }
@@ -135,26 +141,26 @@ button:disabled { opacity: .45; cursor: default; }
 .game-panel:fullscreen .toolbar { flex-wrap: wrap; }
 .status-text { margin: 0; color: #aab9c7; font-size: 12px; }
 .quick-controls { display: flex; align-items: center; gap: 6px; color: #899aab; font-size: 11px; white-space: nowrap; }
-kbd { display: inline-grid; min-width: 22px; height: 22px; place-items: center; margin-left: 8px; border: 1px solid rgba(159,184,207,.2); border-radius: 4px; background: rgba(255,255,255,.035); color: #b6c4d0; font: 500 12px "DM Sans", sans-serif; }
+kbd { display: inline-grid; min-width: 22px; height: 22px; place-items: center; margin-left: 8px; border: 1px solid rgba(159,184,207,.2); border-radius: 4px; background: rgba(255,255,255,.035); color: #b6c4d0; font: 500 12px "Manrope", sans-serif; }
 kbd:first-child { margin-left: 0; }
 
 .how-to { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
 .step-card { display: flex; gap: 12px; min-height: 87px; padding: 15px; border: 1px solid var(--line); border-radius: 8px; background: rgba(16, 30, 45, .55); }
-.step-number { color: var(--mint); font: 500 12px "DM Sans", sans-serif; }
-.step-card h2 { margin: 0 0 5px; font: 600 14px "DM Sans", sans-serif; }
+.step-number { color: var(--mint); font: 500 12px "Manrope", sans-serif; }
+.step-card h2 { margin: 0 0 5px; font: 600 14px "Manrope", sans-serif; }
 .step-card p { margin: 0; color: #aab9c7; font-size: 12px; line-height: 1.6; }
-.page-footer { padding: 25px 0 18px; color: #91a1b3; font: 12px "DM Sans", sans-serif; text-align: center; }
+.page-footer { padding: 25px 0 18px; color: #91a1b3; font: 12px "Manrope", sans-serif; text-align: center; }
 .page-footer span { padding: 0 5px; color: #95a7b5; }
 
 .comparison { padding: 22px; border-top: 1px solid var(--line); background: #102332; }
 .comparison-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.comparison h2 { margin: 0; font: 600 22px "DM Sans", sans-serif; }
+.comparison h2 { margin: 0; font: 600 22px "Manrope", sans-serif; }
 .match-badge { padding: 8px 12px; border: 1px solid rgba(120,226,189,.3); border-radius: 20px; color: var(--mint); font-size: 12px; }
 .comparison-message { color: #d5e4ef; font-size: 14px; line-height: 1.5; }
 .comparison-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
 .comparison-metrics div { padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
 .comparison-metrics dt { color: var(--muted); font-size: 11px; }
-.comparison-metrics dd { margin: 8px 0 0; font: 600 24px "DM Sans", sans-serif; font-variant-numeric: tabular-nums; }
+.comparison-metrics dd { margin: 8px 0 0; font: 600 24px "Manrope", sans-serif; font-variant-numeric: tabular-nums; }
 .comparison-note { max-width: 780px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .route-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #bccddd; font-size: 12px; }
 .player-line, .ai-line { display: inline-block; width: 22px; border-top: 3px solid #f08c68; }
@@ -189,19 +195,21 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
-/* Keep compact mission information outside the playable canvas. */
-.mission-hud { display: flex; align-items: center; gap: 18px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: #102332; flex-shrink: 0; }
-.mission-chip { display: flex; align-items: center; gap: 9px; padding-right: 18px; border-right: 1px solid var(--line); }
-.hud-label, .hud-stats dt { color: #a9bac8; font: 500 12px/1.4 var(--ui-font); letter-spacing: .01em; text-transform: none; }
-.mission-chip strong { color: #ffc758; font: 600 22px/1.2 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
-.hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 18px; width: min(540px, 100%); margin: 0; }
-.hud-stats dd { margin: 3px 0 0; color: #edf4fa; font: 600 15px/1.4 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; letter-spacing: 0; white-space: nowrap; }
+/* A compact flight-instrument strip, kept outside the playable canvas. */
+.mission-hud { display: flex; align-items: center; gap: 32px; padding: 10px 20px; border-bottom: 1px solid rgba(120,226,189,.16); background: linear-gradient(110deg, #122938, #10202e); flex-shrink: 0; }
+.mission-chip { display: flex; flex-shrink: 0; align-items: center; gap: 14px; min-width: 142px; padding-right: 28px; border-right: 1px solid rgba(159,184,207,.22); }
+.hud-label, .hud-stats dt { color: #a9bac8; font: 600 11px/1.4 var(--ui-font); letter-spacing: .08em; text-transform: uppercase; }
+.mission-chip strong { color: #ffc758; font: 600 32px/1 "Rajdhani", var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
+.hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 28px; flex: 1; min-width: 0; max-width: 680px; margin: 0; }
+.hud-stats dd { margin: 5px 0 0; color: #edf4fa; font: 600 14px/1.4 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; letter-spacing: 0; white-space: nowrap; }
+#hud-score, #hud-attempts { font: 600 25px/1.1 "Rajdhani", var(--ui-font); }
 #hud-score { color: #ffe09a; }
-.hud-wind { display: flex; align-items: center; gap: 6px; }
-#hud-wind-arrow { flex-shrink: 0; transform-origin: center; }
+.hud-wind { display: flex; align-items: center; gap: 8px; }
+#hud-wind-arrow { flex-shrink: 0; transform-origin: center; color: var(--mint); }
 @media (max-width: 700px) {
-  .mission-hud { gap: 12px; padding: 8px 12px; }
-  .mission-chip { flex-direction: column; gap: 2px; padding-right: 12px; }
-  .hud-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+  .mission-hud { gap: 20px; padding: 10px 14px; }
+  .mission-chip { flex-direction: column; gap: 4px; min-width: 76px; padding-right: 16px; }
+  .hud-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+  .hud-stats > div:last-child { grid-column: 1 / -1; }
   .hud-stats dd { font-size: 13px; }
 }

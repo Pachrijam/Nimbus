@@ -19,7 +19,7 @@ const game = {level:3,score:2322,tries:2,wind:{x:3,y:4}};
 test("mission and wind values render outside the playable canvas", () => {
   const {nodes,html,hud}=fixture();
   hud.update(game,false);
-  assert.equal(nodes.get("#hud-level").textContent,"3");
+  assert.equal(nodes.get("#hud-level").textContent,"03");
   assert.equal(nodes.get("#hud-score").textContent,"2,322");
   assert.equal(nodes.get("#hud-attempts").textContent,"2");
   assert.equal(nodes.get("#hud-wind").textContent,"Light breeze");

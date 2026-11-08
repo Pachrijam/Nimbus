@@ -219,7 +219,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.strokeStyle = "rgba(255,255,255,.27)";
     ctx.stroke();
     ctx.fillStyle = text === "DELIVERED!" ? "#ffda8b" : "#fff";
-    ctx.font = "600 30px 'DM Sans', sans-serif";
+    ctx.font = "600 30px 'Manrope', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(text, WIDTH / 2, HEIGHT / 2 + 10);
     ctx.restore();
@@ -247,7 +247,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.restore();
     } else {
       ctx.fillStyle = "#b4c7d4";
-      ctx.font = "20px 'DM Sans', sans-serif";
+      ctx.font = "20px 'Manrope', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Enable your camera to draw over a live view", WIDTH / 2, HEIGHT / 2);
     }
@@ -264,7 +264,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     drawCursor(state.input, state.penColor, state.penSize);
     ctx.textAlign = "left";
     ctx.fillStyle = "#fff";
-    ctx.font = "600 15px 'DM Sans', sans-serif";
+    ctx.font = "600 15px 'Manrope', sans-serif";
     ctx.fillText("FREE DRAW  ·  C to clear  ·  Esc or P to return to game", 24, 35);
   }
 
@@ -288,10 +288,10 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.fill();
       ctx.textAlign = "center";
       ctx.fillStyle = replay ? "#d8c3ff" : "#ffda8b";
-      ctx.font = "600 17px 'DM Sans', sans-serif";
+      ctx.font = "600 17px 'Manrope', sans-serif";
       ctx.fillText(title, WIDTH / 2, HEIGHT - 55, WIDTH - 210);
       ctx.fillStyle = "#edf5f7";
-      ctx.font = "13px 'DM Sans', sans-serif";
+      ctx.font = "13px 'Manrope', sans-serif";
       ctx.fillText(detail, WIDTH / 2, HEIGHT - 32, WIDTH - 210);
       ctx.restore();
       return;
@@ -318,10 +318,10 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fill();
     ctx.textAlign = "center";
     ctx.fillStyle = replay ? "#d8c3ff" : "#ffda8b";
-    ctx.font = "600 17px 'DM Sans', sans-serif";
+    ctx.font = "600 17px 'Manrope', sans-serif";
     ctx.fillText(title, WIDTH / 2, HEIGHT - 55, WIDTH - 210);
     ctx.fillStyle = "#edf5f7";
-    ctx.font = "13px 'DM Sans', sans-serif";
+    ctx.font = "13px 'Manrope', sans-serif";
     ctx.fillText(detail, WIDTH / 2, HEIGHT - 32, WIDTH - 210);
     ctx.restore();
   }
@@ -390,7 +390,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.stroke();
       drawDrone(replay.plane, true);
       ctx.fillStyle = "#412074";
-      ctx.font = "700 13px 'DM Sans', sans-serif";
+      ctx.font = "700 13px 'Manrope', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(game.comparison.planner === "local" ? "VERIFIED" : "GEMINI", replay.plane.x, replay.plane.y - 35);
       ctx.restore();
@@ -403,7 +403,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       roundedRect(ctx, WIDTH / 2 - 171, HEIGHT - 55, 342, 32, 16);
       ctx.fill();
       ctx.fillStyle = "#fff";
-      ctx.font = "12px 'DM Sans', sans-serif";
+      ctx.font = "12px 'Manrope', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Start at the drone · release to launch", WIDTH / 2, HEIGHT - 34);
       ctx.textAlign = "left";
@@ -411,7 +411,7 @@ export function createRenderer({ canvas, cameraVideo }) {
 
     if (debug) {
       ctx.fillStyle = "#0a1926";
-      ctx.font = "12px 'DM Sans', sans-serif";
+      ctx.font = "12px 'Manrope', sans-serif";
       ctx.fillText(`${game.state} · ${input.mode} · ${input.mode === "DRAW" ? "drawing" : "idle"}`, 18, HEIGHT - 17);
     }
   }

@@ -9,7 +9,7 @@ export function createMissionHUD(root = document) {
   return {
     update(game, freeDraw) {
       panel.classList.toggle("hidden", freeDraw);
-      write(level, String(game.level));
+      write(level, String(game.level).padStart(2, "0"));
       write(score, formatPoints.format(game.score));
       write(attempts, String(game.tries));
       const speed = Math.hypot(game.wind.x, game.wind.y);
