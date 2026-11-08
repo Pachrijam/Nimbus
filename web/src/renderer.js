@@ -279,19 +279,19 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.restore();
   }
 
-  function drawCursor(input) {
+  function drawCursor(input, color = "#e6534a", size = 14) {
     if (!input.point) return;
     ctx.beginPath();
-    ctx.arc(input.point.x, input.point.y, input.mode === "DRAW" ? 7 : 10, 0, Math.PI * 2);
-    ctx.fillStyle = input.mode === "DRAW" ? "#e6534a" : "rgba(255,255,255,.75)";
+    ctx.arc(input.point.x, input.point.y, input.mode === "DRAW" ? size / 2 : 10, 0, Math.PI * 2);
+    ctx.fillStyle = color;
     ctx.strokeStyle = "#263f4c";
     ctx.lineWidth = input.mode === "DRAW" ? 0 : 2;
     if (input.mode === "DRAW") ctx.fill();
     else ctx.stroke();
   }
 
-  function drawFreeDraw(freeInk, cameraActive) {
-    ctx.fillStyle = "rgba(7,18,29,.74)";
+  function drawFreeDraw(state, cameraActive) {
+    ctx.fillStyle = "#07121d";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (cameraActive && cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       ctx.save();
@@ -300,14 +300,22 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.drawImage(cameraVideo, 0, 0, WIDTH, HEIGHT);
       ctx.restore();
     } else {
-      ctx.fillStyle = "rgba(220,236,237,.12)";
+      ctx.fillStyle = "#b4c7d4";
       ctx.font = "20px 'DM Sans', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Enable your camera to draw over a live view", WIDTH / 2, HEIGHT / 2);
     }
     ctx.fillStyle = "rgba(7,18,29,.48)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    for (const stroke of freeInk) drawPath(stroke, "#ff6d68", 8);
+    for (const stroke of state.freeInk) {
+      if (stroke.points.length === 1) {
+        ctx.beginPath();
+        ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2);
+        ctx.fillStyle = stroke.color;
+        ctx.fill();
+      } else drawPath(stroke.points, stroke.color, stroke.size);
+    }
+    drawCursor(state.input, state.penColor, state.penSize);
     ctx.textAlign = "left";
     ctx.fillStyle = "#fff";
     ctx.font = "600 15px 'DM Sans', sans-serif";
@@ -347,7 +355,7 @@ export function createRenderer({ canvas, cameraVideo }) {
 
   function render(state, cameraActive, now = performance.now()) {
     updateCanvasResolution(canvas, ctx, window.devicePixelRatio || 1);
-    const { game, input, connectionError, freeDraw, freeInk, autopilot, debug } = state;
+    const { game, input, connectionError, freeDraw, autopilot, debug } = state;
     const replay = geminiReplay.frame(state, now);
     if (!game || connectionError) {
       drawBackground();
@@ -355,7 +363,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       return;
     }
     if (freeDraw) {
-      drawFreeDraw(freeInk, cameraActive);
+      drawFreeDraw(state, cameraActive);
       return;
     }
     drawBackground();

@@ -16,8 +16,9 @@ def proposal(points):
     return {"waypoints": [{"x": x, "y": y} for x, y in points]}
 
 
-SAFE_ROUTE = proposal([(90, 300), (240, 180), (480, 180), (680, 200), (840, 300)])
-DIRECT_ROUTE = proposal([(90, 300), (840, 300)])
+PAD = (game.PAD_MARGIN, 300)
+SAFE_ROUTE = proposal([PAD, (240, 180), (480, 180), (680, 200), (840, 300)])
+DIRECT_ROUTE = proposal([PAD, (840, 300)])
 
 
 class GeminiTests(unittest.TestCase):
@@ -111,11 +112,11 @@ class GeminiTests(unittest.TestCase):
 
     def test_untrusted_waypoints_cannot_skip_start_or_leave_field(self):
         invalid = [proposal([(840, 300), (840, 300)]),
-                   proposal([(90, 300), (841, 400)]),
-                   proposal([(90, 300), (float("nan"), 200), (840, 300)]),
-                   proposal([(90, 300), (True, 200), (840, 300)]),
-                   proposal([(90, 300), (400, -1), (840, 300)]),
-                   {"waypoints": []}, proposal([(90, 300)] * 17)]
+                   proposal([PAD, (841, 400)]),
+                   proposal([PAD, (float("nan"), 200), (840, 300)]),
+                   proposal([PAD, (True, 200), (840, 300)]),
+                   proposal([PAD, (400, -1), (840, 300)]),
+                   {"waypoints": []}, proposal([PAD] * 17)]
         for value in invalid:
             with self.subTest(value=value), self.assertRaises(ValueError):
                 gemini_agent.validate_route(value, self.layout)
@@ -219,7 +220,7 @@ class GeminiTests(unittest.TestCase):
         elapsed = session.game.flight_ticks * flight_sim.STEP
         for factor, verdict in ((1.1, "beat"), (0.8, "chasing")):
             job.result = {"status": "ready", "time": elapsed * factor, "distance": 800,
-                          "model": "gemini-test", "tested": 3, "trajectory": [(90, 300), (840, 300)]}
+                          "model": "gemini-test", "tested": 3, "trajectory": [PAD, (840, 300)]}
             snapshot = session.snapshot()
             self.assertEqual(snapshot["comparison"]["verdict"], verdict)
             self.assertEqual(snapshot["comparison"]["matchPercent"], round(factor * 100, 1))
