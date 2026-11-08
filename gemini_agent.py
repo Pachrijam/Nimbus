@@ -152,7 +152,7 @@ class BenchmarkJob:
         self.done = threading.Event()
         api_key, model = gemini_settings(DEFAULT_MODEL)
         if not api_key:
-            self.result = {"status": "disabled", "message": "Gemini challenge is not configured. Set GEMINI_API_KEY on the server."}
+            self.result = {"status": "disabled", "message": "AI comparison is off for this session. Your delivery counts; retry or continue to the next level."}
         elif not re.fullmatch(r"gemini-[a-zA-Z0-9.\-]+", model):
             self.result = {"status": "unavailable", "message": "Check GEMINI_MODEL on the server."}
         elif not _slots.acquire(blocking=False):

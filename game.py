@@ -174,18 +174,22 @@ class Game:
                 self.drawing_pause = 0.0
                 if paths.distance(point, self.raw_path[-1]) >= MIN_POINT_DISTANCE:
                     self.raw_path.append(point)
-                # Launch on arrival so changing gestures cannot move the endpoint away.
-                if (len(self.raw_path) >= MIN_PATH_POINTS and
+                if (gesture_input and len(self.raw_path) >= MIN_PATH_POINTS and
                         paths.distance(point, self.star) <= STAR_RADIUS):
-                    if self.raw_path[-1] != point:
-                        self.raw_path.append(point)
+                    if self.raw_path[-1] != self.star:
+                        self.raw_path.append(self.star)
                     self.finish_path()
-            elif mode == "HOVER" and point is not None:
+            elif (gesture_input and mode == "HOVER" and point is not None
+                  and len(self.raw_path) >= MIN_PATH_POINTS):
+                # Use the drawn endpoint, not finger movement during release.
+                if (self.raw_path[-1] != self.star
+                        and paths.distance(self.raw_path[-1], self.star) <= HAND_FINISH_RADIUS):
+                    self.raw_path.append(self.star)
                 self.finish_path()
-            else:
-                # Pause: keep the route and wait. Only HOVER (or reaching the star) launches,
-                # so a misread finger or a lost hand never launches a half-drawn route.
+            elif gesture_input:
                 self.drawing_pause += dt
+            else:
+                self.finish_path()
  
         elif self.state == "FLYING":
             self.update_flight(dt)
@@ -305,6 +309,8 @@ class Game:
                 message = f"Gemini match: {result['matchPercent']:.0f}% | R: retry  N: next"
             elif result["status"] == "pending":
                 message = "Delivered! Gemini planning... R: retry  N: next"
+            elif result["status"] == "disabled":
+                message = "Delivered! R: retry  N: next"
             else:
                 message = "Delivered! AI unavailable. R: retry  N: next"
             visuals.draw_message(img, message, 0.6)

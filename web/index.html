@@ -63,15 +63,15 @@
           <p id="comparison-message" class="comparison-message" role="status" aria-live="polite"></p>
           <dl class="comparison-metrics">
             <div><dt>Your flight</dt><dd id="player-time">—</dd></div>
-            <div><dt>Gemini's flight</dt><dd id="ai-time">—</dd></div>
-            <div><dt>AI performance</dt><dd id="match-percent">—</dd></div>
+            <div id="ai-time-metric"><dt>Gemini's flight</dt><dd id="ai-time">—</dd></div>
+            <div id="ai-performance-metric"><dt>AI performance</dt><dd id="match-percent">—</dd></div>
             <div><dt>Your best this level</dt><dd id="best-time">—</dd></div>
           </dl>
-          <p class="route-legend"><span class="player-line" aria-hidden="true"></span> Your flight <span class="ai-line" aria-hidden="true"></span> Gemini's flight (dashed)</p>
+          <p class="route-legend" id="route-legend"><span class="player-line" aria-hidden="true"></span> Your flight <span class="ai-line" aria-hidden="true"></span> Gemini's flight (dashed)</p>
           <p class="comparison-note" id="comparison-note">Gemini's routes are tested with the same wind, moving storms, and flight physics.</p>
           <div class="comparison-actions">
             <button class="tool-button" id="gemini-replay" type="button" disabled>Replay Gemini's flight</button>
-            <button class="tool-button active" id="challenge-retry" type="button">Try to beat Gemini <kbd>R</kbd></button>
+            <button class="tool-button active" id="challenge-retry" type="button"><span id="retry-label">Try to beat Gemini</span> <kbd>R</kbd></button>
             <button class="tool-button" id="challenge-next" type="button">Next level <kbd>N</kbd></button>
           </div>
         </section>

@@ -309,9 +309,15 @@ export function createRenderer({ canvas, cameraVideo }) {
     if (replay) {
       title = replay.done ? "Gemini's flight complete" : `Watch Gemini fly: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`;
       detail = "Orange: your flight   |   Purple: Gemini   |   Replay and results below";
+    } else if (result?.status === "disabled") {
+      title = "Delivered! Mission complete.";
+      detail = "AI comparison is off. Press N for the next level or R to retry.";
+    } else if (result?.status === "ready") {
+      title = "Delivered! Flight comparison ready.";
+      detail = "Compare your time below. Press N to continue or R to retry.";
     } else if (result && result.status !== "pending") {
-      title = "Delivered! Gemini's flight is unavailable.";
-      detail = result.message;
+      title = "Delivered! AI comparison is unavailable this round.";
+      detail = "Your delivery counts. Press N to continue or R to retry.";
     }
     ctx.save();
     roundedRect(ctx, 90, HEIGHT - 82, WIDTH - 180, 66, 10);

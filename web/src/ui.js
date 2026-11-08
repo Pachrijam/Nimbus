@@ -14,10 +14,16 @@ export function createUI({ canvas, statusText, toast }) {
     write("player-time", `${result.playerTime.toFixed(2)} s`);
     write("best-time", `${result.bestTime.toFixed(2)} s`);
     const ready = result.status === "ready";
+    const disabled = result.status === "disabled";
+    write("comparison-title", disabled ? "Delivery complete" : "Your flight vs. Gemini");
+    write("retry-label", disabled ? "Retry this level" : "Try to beat Gemini");
+    for (const id of ["ai-time-metric", "ai-performance-metric", "route-legend", "gemini-replay"]) {
+      document.querySelector(`#${id}`).classList.toggle("hidden", disabled);
+    }
     write("ai-time", ready ? `${result.aiTime.toFixed(2)} s` : "—");
     write("match-percent", ready ? `${result.matchPercent.toFixed(1)}%` : "—");
     const badges = { beat: "You beat Gemini!", matched: "AI performance matched", chasing: "Chase Gemini" };
-    write("match-badge", ready ? badges[result.verdict] : result.status === "pending" ? "Planning..." : "AI unavailable");
+    write("match-badge", ready ? badges[result.verdict] : result.status === "pending" ? "Planning..." : disabled ? "Delivered!" : "AI unavailable");
     let message = result.message;
     if (ready) {
       const gap = Math.abs(result.timeDelta).toFixed(2);
@@ -30,7 +36,9 @@ export function createUI({ canvas, statusText, toast }) {
     write("comparison-message", message);
     write("comparison-note", ready
       ? `Best of ${result.tested} simulated Gemini routes, not a guaranteed optimum. AI performance = Gemini time ÷ your time; 100% is equal, above 100% is faster. Matched means within 5% of AI performance.`
-      : "Gemini's routes are tested with the same wind, moving storms, and flight physics. Your delivery is saved for this level.");
+      : disabled
+        ? "Your score and best flight time are saved for this level. Press N or choose Next level to continue."
+        : "Gemini's routes are tested with the same wind, moving storms, and flight physics. Your delivery is saved for this level.");
     comparisonPanel.setAttribute("aria-busy", String(result.status === "pending"));
   }
 
@@ -64,7 +72,9 @@ export function createUI({ canvas, statusText, toast }) {
         READY: "Draw a route from the drone with one finger, then hold up two fingers to launch.",
         DRAWING: "Hold up two fingers when you're ready to launch. Tracking gaps pause your route.",
         FLYING: "Drone launched. Avoid the storms!",
-        LANDED: "Delivery complete! Compare with Gemini below. R to retry this level, N to continue.",
+        LANDED: snapshot.comparison?.status === "disabled"
+          ? "Delivered! R to retry this level, N to continue."
+          : "Delivery complete! Compare with Gemini below. R to retry this level, N to continue.",
         CRASHED: "Route failed. Preparing another attempt...",
       };
       setStatus(messages[snapshot.state]);
