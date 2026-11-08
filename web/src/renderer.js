@@ -227,10 +227,10 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.textBaseline = "middle";
     ctx.font = "600 15px 'DM Sans', sans-serif";
     ctx.fillStyle = "#ffe09a";
-    ctx.fillText(`SCORE ${game.score}`, 174, scoreRowY);
+    ctx.fillText(`SCORE: ${game.score}`, 174, scoreRowY);
     ctx.fillStyle = "rgba(255,255,255,.72)";
     ctx.font = "12px 'DM Sans', sans-serif";
-    ctx.fillText(`ATTEMPTS ${game.tries}`, 174, attemptsRowY);
+    ctx.fillText(`ATTEMPTS: ${game.tries}`, 174, attemptsRowY);
 
     const windCenter = { x: 364, y: scoreRowY };
     const length = Math.hypot(game.wind.x, game.wind.y);
