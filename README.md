@@ -285,5 +285,8 @@ python -m unittest discover -s tests -v
 ## Video Demonstration
 https://youtu.be/2xm-bpWIljM?si=SmOF5bwdHMzhhxtb
 
+## Devpost Submission
+https://devpost.com/software/nimbus-xzaoic
+
 ## Credits
 Hand tracking: Google MediaPipe HandLandmarker. Built at HackRPI 2026 by Avyay, Paul and Harry.
