@@ -2,62 +2,115 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
   const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
   const MEDIAPIPE_VERSION = "1.2.2";
 
+  let handLandmarker = null;
+  let cameraStream = null;
+  let lastVideoTime = -1;
+  let lastHandLandmarks = null;
+  let cameraRequest = 0;
+  let handTrackingLoad = null;
   let handTrackingStarting = false;
   let cameraError = "";
-  let currentRequest = 0;
-  let sensor = null;
-  let lastFrame = null;
-  let handLandmarks = [];
-
-  function startCamera() {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      cameraError = "Camera access is unavailable in this browser.";
-      setStatus(cameraError);
-      return;
-    }
-    if (!cameraVideo) return;
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then((stream) => {
-      cameraVideo.srcObject = stream;
-      cameraVideo.play();
-      sensor = stream.getVideoTracks()[0];
-      cameraError = "";
-    }).catch((error) => {
-      cameraError = error.message;
-      setStatus(`Camera access failed: ${cameraError}`);
-      showToast(cameraError, 8000);
-    });
-  }
 
   function stopCamera() {
-    if (sensor) {
-      sensor.stop();
-      sensor = null;
+    lastVideoTime = -1;
+    lastHandLandmarks = null;
+    cameraRequest += 1;
+    handTrackingStarting = false;
+    if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+    cameraVideo.pause();
+    cameraVideo.srcObject = null;
+    cameraPreview.classList.add("hidden");
+  }
+
+  async function enableCamera(request) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera access requires HTTPS or localhost and a browser that supports webcam input.");
     }
-    if (cameraVideo?.srcObject) {
-      cameraVideo.srcObject.getTracks().forEach((track) => track.stop());
-      cameraVideo.srcObject = null;
+    if (!cameraStream) {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+      // A permission prompt can finish after the camera request was cancelled.
+      if (request !== cameraRequest) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      cameraStream = stream;
+      cameraVideo.srcObject = cameraStream;
+      await cameraVideo.play();
+      if (request !== cameraRequest) return;
+      cameraPreview.classList.remove("hidden");
     }
   }
 
-  function enableHandTracking() {
-    const request = ++currentRequest;
+  async function enableHandTracking() {
+    if (getInputMode() === "HAND" || handTrackingStarting) return;
+    const request = ++cameraRequest;
     handTrackingStarting = true;
-    setInputMode("HAND");
-    startCamera();
-    setStatus(isFreeDraw()
-      ? "Free draw: one finger draws; two or more change color. U undoes, C clears; Esc or P returns."
-      : "Draw a route from the drone with one finger, then hold up two or more fingers to launch. Tracking gaps pause your route.");
+    setStatus("Requesting camera access…");
+    try {
+      await enableCamera(request);
+      if (request !== cameraRequest) return;
+      if (!handLandmarker) {
+        setStatus("Loading hand-tracking model…");
+        if (!handTrackingLoad) {
+          handTrackingLoad = (async () => {
+            const vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}`);
+            const fileset = await vision.FilesetResolver.forVisionTasks(
+              `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`,
+            );
+            const options = {
+              baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+              runningMode: "VIDEO",
+              numHands: 1,
+            };
+            try {
+              handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, options);
+            } catch {
+              handLandmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+                ...options,
+                baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
+              });
+            }
+          })().finally(() => {
+            handTrackingLoad = null;
+          });
+        }
+        await handTrackingLoad;
+      }
+      if (request !== cameraRequest) return;
+      handTrackingStarting = false;
+      cameraError = "";
+      setInputMode("HAND");
+      setStatus(isFreeDraw()
+        ? "Free draw: one finger draws; two or more change color. U undoes, C clears; Esc or P returns."
+        : "Draw a route from the drone with one finger, then hold up two or more fingers to launch. Tracking gaps pause your route.");
+    } catch (error) {
+      if (request !== cameraRequest) return;
+      cameraError = error instanceof Error ? error.message : String(error);
+      setInputMode("OFF");
+      setStatus("Hand tracking could not start. Check camera access, then select Start to try again.");
+      showToast(`Camera/hand tracking unavailable: ${cameraError}`);
+    }
   }
 
-  function handLandmarksForFrame() {
-    return handLandmarks;
+  function handLandmarks() {
+    if (!cameraStream || !handLandmarker || cameraVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
+    // Display refresh can be faster than the camera; infer only on new video frames.
+    if (cameraVideo.currentTime === lastVideoTime) return lastHandLandmarks;
+    const result = handLandmarker.detectForVideo(cameraVideo, performance.now());
+    lastVideoTime = cameraVideo.currentTime;
+    lastHandLandmarks = result.landmarks?.[0]?.map(({ x, y, z }) => ({ x, y, z })) ?? null;
+    return lastHandLandmarks;
   }
 
   return {
-    active: !!cameraVideo?.srcObject,
-    aspectRatio: 1,
-    handLandmarks: handLandmarksForFrame,
     stopCamera,
     enableHandTracking,
+    handLandmarks,
+    get aspectRatio() { return cameraVideo.videoWidth / cameraVideo.videoHeight || 4 / 3; },
+    get active() { return Boolean(cameraStream); },
   };
 }

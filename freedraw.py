@@ -1,25 +1,19 @@
+"""
+Free Draw: simple air drawing over the camera (warm-up mode). Toggle with 'p', clear with 'c'.
+"""
 import cv2
 import numpy as np
 
-from visuals import draw_text
+import visuals
 
-# Free-draw colors match the browser palette for desktop testing.
-COLORS = [
-    (255, 109, 104),
-    (104, 186, 255),
-    (120, 226, 189),
-    (255, 218, 139),
-    (255, 255, 255),
-]
+COLORS = [(40, 40, 230), (230, 160, 40), (60, 200, 60), (40, 200, 255), (255, 255, 255)]
 
 
 class FreeDraw:
     def __init__(self, w, h):
-        self.w = w
-        self.h = h
-        self.ink = np.zeros((h, w, 3), dtype=np.uint8)
+        self.ink = np.zeros((h, w, 3), dtype=np.uint8)   # black = no ink
         self.color_index = 0
-        self.color = COLORS[self.color_index]
+        self.color = COLORS[0]
         self.thickness = 8
         self.prev_point = None
         self.prev_mode = "IDLE"
@@ -46,8 +40,8 @@ class FreeDraw:
         mask = gray > 0
         output[mask] = self.ink[mask]
 
-        draw_text(output, "FREE DRAW", 15, 35, 0.8)
-        draw_text(output, "point: draw   peace: next color   c: clear   p: back to game", 15, 62, 0.5)
+        visuals.draw_text(output, "FREE DRAW", 15, 35, 0.8)
+        visuals.draw_text(output, "point: draw   peace: next color   c: clear   p: back to game", 15, 62, 0.5)
         cv2.circle(output, (200, 28), 10, self.color, -1, cv2.LINE_AA)
         return output
 
