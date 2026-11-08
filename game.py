@@ -2,8 +2,7 @@
 Flight Path game: state machine, levels, collisions, score.
 Owner: Person 3 (calls physics.py from Avyay and visuals.py from Paul)
  
-States:  READY -> DRAWING -> FLYING -> LANDED  -> next level
-                                   -> CRASHED -> retry
+States:  READY -> DRAWING -> FLYING -> LANDED / CRASHED -> retry or next level
 """
 import math
 import random
@@ -18,7 +17,6 @@ START_CLEARANCE = 90     # px: keep clouds away from the launch area
 STAR_RADIUS = flight_sim.STAR_RADIUS
 HAND_FINISH_RADIUS = 60  # px: snap a nearby hand-drawn endpoint to the star
 MIN_PATH_POINTS = 10     # ignore accidental tiny paths
-MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
 PAD_MARGIN = 120         # px from the left edge
 MAX_CLOUDS = 8
 CLOUD_RADIUS = 45
@@ -204,10 +202,7 @@ class Game:
             self.update_flight(dt)
  
         elif self.state == "CRASHED":
-            self.timer += dt
-            if self.timer >= MESSAGE_TIME:
-                self.retry()
-        # Successful flights stay visible until the player chooses retry or next.
+            pass
  
     def finish_path(self):
         if len(self.raw_path) < MIN_PATH_POINTS:
@@ -237,6 +232,8 @@ class Game:
                 self.timer = 0.0
                 if self.state == "LANDED":
                     self.complete_delivery()
+                else:
+                    self.start_benchmark()
 
     def level_layout(self):
         """Detached launch conditions; camera and player input never go to Gemini."""
@@ -263,30 +260,38 @@ class Game:
             efficiency = min(1.0, direct_length / max(route_length, 1))
             self.level_score = base_score + int(efficiency * 200)
             self.score += self.level_score
+        self.start_benchmark()
+
+    def start_benchmark(self):
         if self.benchmark_job is None:
             self.benchmark_job = gemini_agent.BenchmarkJob(self.level_layout())
 
     def comparison(self):
-        if self.state != "LANDED":
+        if self.state not in ("LANDED", "CRASHED"):
             return None
         elapsed = self.flight_ticks * flight_sim.STEP
-        result = {"playerTime": elapsed, "playerDistance": self.flight_distance,
+        result = {"playerState": self.state, "playerTime": elapsed,
+                  "playerDistance": self.flight_distance,
                   "bestTime": self.best_time, "status": "pending"}
         if self.benchmark_job is None or not self.benchmark_job.done.is_set():
             return {**result, "message": "Gemini is planning and testing its routes..."}
         benchmark = self.benchmark_job.result
         result.update({"status": benchmark["status"], "message": benchmark.get("message", "")})
         if benchmark["status"] == "ready":
-            ratio = benchmark["time"] / max(elapsed, flight_sim.STEP)
-            delta = elapsed - benchmark["time"]
-            verdict = "beat" if delta < -flight_sim.STEP / 2 else "matched" if ratio >= 0.95 else "chasing"
             result.update({"aiTime": benchmark["time"], "aiDistance": benchmark["distance"],
-                           "matchPercent": round(100 * ratio, 1), "timeDelta": delta,
-                           "verdict": verdict, "model": benchmark["model"],
+                           "model": benchmark["model"],
                            "tested": benchmark["tested"],
                            "planner": benchmark.get("planner", "gemini"),
                            "refined": benchmark.get("refined", 0),
                            "aiTrajectory": [{"x": x, "y": y} for x, y in benchmark["trajectory"]]})
+            if self.state == "LANDED":
+                ratio = benchmark["time"] / max(elapsed, flight_sim.STEP)
+                delta = elapsed - benchmark["time"]
+                verdict = "beat" if delta < -flight_sim.STEP / 2 else "matched" if ratio >= 0.95 else "chasing"
+                result.update(matchPercent=round(100 * ratio, 1), timeDelta=delta,
+                              verdict=verdict)
+            else:
+                result["aiRescued"] = True
         return result
  
     # ---------- Drawing ----------
@@ -307,7 +312,7 @@ class Game:
             visuals.draw_route(img, preview, tight)
         elif self.state == "FLYING":
             visuals.draw_path(img, self.path, (230, 230, 230), 2)
-        elif self.state == "LANDED":
+        elif self.state in ("LANDED", "CRASHED"):
             visuals.draw_path(img, self.trajectory, (40, 120, 230), 3)
             result = self.comparison()
             if result["status"] == "ready":
@@ -344,7 +349,15 @@ class Game:
                 message = "Delivered! AI unavailable. R: retry  N: next"
             visuals.draw_message(img, message, 0.6)
         elif self.state == "CRASHED":
-            visuals.draw_message(img, "ROUTE FAILED")
+            result = self.comparison()
+            message = (
+                f"AI found safe route in {result['aiTime']:.2f} s | R: retry  N: next"
+                if result["status"] == "ready"
+                else "Route failed. AI planning... R: retry  N: next"
+                if result["status"] == "pending"
+                else "Route failed. AI unavailable. R: retry  N: next"
+            )
+            visuals.draw_message(img, message, 0.7)
  
         visuals.draw_cursor(img, self.cursor_mode, self.cursor_point)
         return img

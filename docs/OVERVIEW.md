@@ -30,7 +30,9 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 2. The user raises their **index finger** near the drone and draws a route. The route is **smoothed live**; any too-tight turn shows **red**.
 3. The user raises **two or more fingers** to release, and the drone **launches**.
 4. The drone follows the route, **banking smoothly**, **drifting in wind** and **correcting back**. Storm cells may **drift** across the route mid-flight.
-5. **DELIVERED!** shows the score, then the next level. Or **ROUTE FAILED** with a crash effect, then a retry of the same layout.
+5. On a delivery, compare your flight with Gemini's benchmark. If your route
+   crashes, Gemini searches for a safe route through the same conditions. The
+   result screen remains until you retry or continue.
 6. Press `v` for the **autopilot view**: a red dot shows exactly where the controller is aiming.
 7. Press `p` for **Free Draw**: simple air drawing over the camera (warm-up and backup demo).
 
@@ -48,8 +50,8 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 
 ## 5. Game states
 ```
-READY ──(DRAW near drone)──> DRAWING ──(leave DRAW)──> FLYING ──(reach destination)──> LANDED ──(2 s)──> next level
-  ^                              │                         └──(cloud / off-screen)──> CRASHED ──(2 s)──> retry
+READY ──(DRAW near drone)──> DRAWING ──(leave DRAW)──> FLYING ──(reach destination)──> LANDED ──(R / N)──> retry / next
+  ^                              │                         └──(cloud / off-screen)──> CRASHED ──(R / N)──> retry / next
   └──────(path < 10 points)──────┘
 ```
 | State | Behavior | Message |
@@ -57,10 +59,10 @@ READY ──(DRAW near drone)──> DRAWING ──(leave DRAW)──> FLYING �
 | READY | Scene shown; drone on pad | "Draw a route from the drone to the destination" |
 | DRAWING | Points recorded; live smoothed preview with red tight turns | (none) |
 | FLYING | Physics runs; clouds drift; contrail | (none) |
-| LANDED | Score added | "DELIVERED!" |
-| CRASHED | Crash effect | "ROUTE FAILED" |
+| LANDED | Score added; benchmark shown | Delivery comparison |
+| CRASHED | AI searches for a safe route; compare and choose what to do next | Route comparison |
 
-Rules: the route must start within **40 px** of the drone; routes under **10 points** are ignored; LANDED/CRASHED show for **2 s**.
+Rules: the route must start within **18 px** of the drone; routes under **10 points** are ignored; LANDED/CRASHED remain until retry or next level.
 
 ---
 

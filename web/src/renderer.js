@@ -270,6 +270,30 @@ export function createRenderer({ canvas, cameraVideo }) {
 
   function drawComparisonStatus(game, replay) {
     const result = game.comparison;
+    if (game.state === "CRASHED") {
+      const title = replay
+        ? replay.done ? "Gemini completed the safe route" : `Gemini safe route: ${replay.elapsed.toFixed(1)} / ${replay.duration.toFixed(1)} s`
+        : result?.status === "pending" ? "Route failed. Gemini is searching for a safe route..."
+          : result?.status === "ready" ? `Gemini found a safe route in ${result.aiTime.toFixed(2)} s`
+            : result?.status === "disabled" ? "Route failed. AI comparison is off."
+              : "Route failed. Gemini could not find a safe route.";
+      const detail = replay
+        ? "Orange: your failed route   |   Purple: Gemini's verified route"
+        : "Your failed route is orange. Gemini's verified route will appear in purple.";
+      ctx.save();
+      roundedRect(ctx, 90, HEIGHT - 82, WIDTH - 180, 66, 10);
+      ctx.fillStyle = "rgba(10,26,38,.94)";
+      ctx.fill();
+      ctx.textAlign = "center";
+      ctx.fillStyle = replay ? "#d8c3ff" : "#ffda8b";
+      ctx.font = "600 17px 'DM Sans', sans-serif";
+      ctx.fillText(title, WIDTH / 2, HEIGHT - 55, WIDTH - 210);
+      ctx.fillStyle = "#edf5f7";
+      ctx.font = "13px 'DM Sans', sans-serif";
+      ctx.fillText(detail, WIDTH / 2, HEIGHT - 32, WIDTH - 210);
+      ctx.restore();
+      return;
+    }
     let title = "Delivered! Gemini is planning and testing its routes...";
     let detail = "Your flight is orange. Gemini's flight will appear in purple.";
     if (replay) {
@@ -318,7 +342,7 @@ export function createRenderer({ canvas, cameraVideo }) {
 
     if (game.state === "DRAWING") drawRoutePreview(game);
     else if (game.state === "FLYING") drawPath(game.path, "rgba(255,255,255,.86)", 3, true);
-    else if (game.state === "LANDED") {
+    else if (["LANDED", "CRASHED"].includes(game.state)) {
       drawPath(game.trajectory, "#b43b13", 7);
       if (game.comparison?.status === "ready") {
         drawPath(game.comparison.aiTrajectory, "#6334a7", 4, true);
@@ -366,7 +390,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.restore();
     }
     drawCursor(input);
-    if (game.state === "LANDED") drawComparisonStatus(game, replay);
+    if (["LANDED", "CRASHED"].includes(game.state)) drawComparisonStatus(game, replay);
 
     if (game.state === "READY") {
       ctx.fillStyle = "rgba(14,39,50,.78)";
@@ -377,7 +401,7 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.textAlign = "center";
       ctx.fillText("Start at the drone · release to launch", WIDTH / 2, HEIGHT - 34);
       ctx.textAlign = "left";
-    } else if (game.state === "CRASHED") drawMessage("ROUTE FAILED");
+    }
 
     if (debug) {
       ctx.fillStyle = "#0a1926";

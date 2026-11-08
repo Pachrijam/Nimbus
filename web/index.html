@@ -79,17 +79,17 @@
         <section class="comparison hidden" id="comparison" aria-labelledby="comparison-title">
           <div class="comparison-heading">
             <div>
-              <p class="eyebrow">Delivery complete</p>
+              <p class="eyebrow" id="comparison-eyebrow">Mission comparison</p>
               <h2 id="comparison-title" role="status" aria-live="polite">Your flight vs. Gemini</h2>
             </div>
             <span class="match-badge" id="match-badge">Planning...</span>
           </div>
           <p id="comparison-message" class="comparison-message"></p>
           <dl class="comparison-metrics">
-            <div><dt>Your flight</dt><dd id="player-time">—</dd></div>
+            <div><dt id="player-time-label">Your flight</dt><dd id="player-time">—</dd></div>
             <div id="ai-time-metric"><dt>Gemini's flight</dt><dd id="ai-time">—</dd></div>
             <div id="time-gap-metric"><dt>Time gap</dt><dd id="time-gap">—</dd></div>
-            <div><dt>Your best this level</dt><dd id="best-time">—</dd></div>
+            <div id="best-time-metric"><dt>Your best this level</dt><dd id="best-time">—</dd></div>
           </dl>
           <p class="route-legend" id="route-legend"><span class="player-line" aria-hidden="true"></span> Your flight <span class="ai-line" aria-hidden="true"></span> Gemini's flight (dashed)</p>
           <p class="comparison-note" id="comparison-note">Gemini's routes are tested with the same wind, moving storms, and flight physics.</p>

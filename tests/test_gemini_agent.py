@@ -233,12 +233,42 @@ class GeminiTests(unittest.TestCase):
         self.assertIsNone(session.snapshot()["comparison"])
         self.assertEqual(session.snapshot()["trajectory"], [])
 
-    def test_crash_does_not_call_gemini(self):
+    def test_crash_starts_safe_route_search_and_waits_for_player_action(self):
         with patch("gemini_agent.BenchmarkJob") as job:
+            job.return_value.done.is_set.return_value = False
             self.fly(self.flight, DIRECT_ROUTE)
             self.assertEqual(self.flight.state, "CRASHED")
-            job.assert_not_called()
-            self.assertIsNone(self.flight.comparison())
+            job.assert_called_once_with(self.flight.level_layout())
+            comparison = self.flight.comparison()
+            self.assertEqual(comparison["playerState"], "CRASHED")
+            self.assertEqual(comparison["status"], "pending")
+            self.flight.update("IDLE", None, 10)
+            self.assertEqual(self.flight.state, "CRASHED")
+
+    def test_crash_comparison_reports_verified_ai_route_without_claiming_a_time_win(self):
+        with patch("gemini_agent.BenchmarkJob") as job:
+            self.fly(self.flight, DIRECT_ROUTE)
+        benchmark = job.return_value
+        benchmark.done.is_set.return_value = True
+        benchmark.result = {
+            "status": "ready", "time": 8.5, "distance": 900,
+            "model": "gemini-test", "tested": 4, "refined": 2,
+            "planner": "gemini_predictive", "trajectory": [PAD, (840, 300)],
+        }
+
+        result = self.flight.comparison()
+
+        self.assertEqual(result["playerState"], "CRASHED")
+        self.assertTrue(result["aiRescued"])
+        self.assertEqual(result["aiTime"], 8.5)
+        self.assertNotIn("verdict", result)
+        self.assertNotIn("timeDelta", result)
+        session = Session()
+        session.game = self.flight
+        snapshot = session.snapshot()
+        self.assertTrue(snapshot["trajectory"])
+        self.assertEqual(snapshot["launchClouds"], self.flight.cloud_layout)
+        json.dumps(snapshot, allow_nan=False)
 
 
 if __name__ == "__main__":

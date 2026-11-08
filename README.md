@@ -117,15 +117,19 @@ P or Esc to return to the game.
 Hand tracking loads MediaPipe and its model from the internet and requires
 HTTPS when deployed (localhost is allowed for development).
 
-### Challenge Gemini after delivery
+### Challenge Gemini after each flight
 
-Successful flights now stay on the results screen. Gemini proposes routes for
-the same level, and Python flies each proposal through the same fixed-step
-physics, wind, and moving clouds as the player. The fastest successful proposal
-becomes the benchmark. Both actual flight paths appear on the field; the results
-lead with who finished faster and the time difference in seconds. Both flight
-times, the time gap, and your best time on this level appear below. Close finishes
-are labeled "Nearly tied" while the headline still shows who was faster.
+Successful flights and crashes stay on the results screen. If your route
+crashes, Gemini tries to find a safe route through the same level; after a
+successful delivery, it benchmarks your flight against its own proposals.
+Gemini proposes routes for the same level, and Python flies each proposal
+through the same fixed-step physics, wind, and moving clouds as the player.
+The fastest successful proposal becomes the benchmark. Both actual flight paths
+appear on the field; after a crash, the result calls out Gemini's safe route
+instead of claiming a time win. After a delivery, the results lead with who
+finished faster and the time difference in seconds. Both flight times, the time
+gap, and your best time on this level appear below. Close finishes are labeled
+"Nearly tied" while the headline still shows who was faster.
 This is the **best verified route**, including
 predictive refinements on moving-cloud levels, not
 a mathematically guaranteed optimal path. Gemini's machine learning generates
@@ -154,9 +158,10 @@ visible afterward. Use **Replay Gemini's flight** below the field to watch again
 without making another API request. Planning and unavailable messages also
 appear on the field while you wait.
 
-Press **R / Try to beat Gemini** for the same layout and benchmark, or **N / Next
-level** to continue. Rematches keep your best time without repeatedly awarding
-the level's delivery points. Failed flights still retry automatically.
+Press **R / Try another route** for the same layout and benchmark, or **N / Next
+level** to continue. Crashes remain visible until you choose an action.
+Successful rematches keep your best time without repeatedly awarding the
+level's delivery points.
 
 Put your [Gemini API key](https://ai.google.dev/gemini-api/docs/api-key) in the
 repository-root `.env` file (create it if needed):

@@ -77,8 +77,10 @@ class Session:
             "comparison": flight.comparison(),
             "fieldWidth": flight.w,
             "fieldHeight": flight.h,
-            "launchClouds": [dict(c) for c in flight.cloud_layout] if flight.state == "LANDED" else [],
-            "trajectory": list(map(point, flight.trajectory)) if flight.state == "LANDED" else [],
+            "launchClouds": [dict(c) for c in flight.cloud_layout]
+                            if flight.state in ("LANDED", "CRASHED") else [],
+            "trajectory": list(map(point, flight.trajectory))
+                          if flight.state in ("LANDED", "CRASHED") else [],
             "cursor": {"mode": self.cursor[0], "point": point(self.cursor[1])},
         }
 

@@ -10,7 +10,8 @@ export function createGeminiReplay() {
     frame(state, now) {
       const game = state.game;
       const result = game?.comparison;
-      if (game?.state !== "LANDED" || result?.status !== "ready" || result.aiTrajectory.length < 2) {
+      if (!["LANDED", "CRASHED"].includes(game?.state)
+          || result?.status !== "ready" || result.aiTrajectory.length < 2) {
         key = null;
         previousTime = null;
         return null;
