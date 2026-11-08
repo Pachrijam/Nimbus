@@ -41,12 +41,20 @@ export function createGeminiReplay() {
       while (cloudTick < Math.floor(sample)) {
         for (const cloud of clouds) {
           cloud.x += cloud.vx * step;
+          cloud.y += (cloud.vy ?? 0) * step;
           if (cloud.x < cloud.r) {
             cloud.x = cloud.r;
             cloud.vx = Math.abs(cloud.vx);
           } else if (cloud.x > game.fieldWidth - cloud.r) {
             cloud.x = game.fieldWidth - cloud.r;
             cloud.vx = -Math.abs(cloud.vx);
+          }
+          if (cloud.y < cloud.r) {
+            cloud.y = cloud.r;
+            cloud.vy = Math.abs(cloud.vy ?? 0);
+          } else if (cloud.y > (game.fieldHeight ?? 600) - cloud.r) {
+            cloud.y = (game.fieldHeight ?? 600) - cloud.r;
+            cloud.vy = -Math.abs(cloud.vy ?? 0);
           }
         }
         cloudTick += 1;
