@@ -104,9 +104,10 @@ h1 span { color: #8ca2b6; }
 .tool-button.start-game-button:hover { border-color: #a0f0d3; background: #a0f0d3; color: #081321; }
 .tool-button.start-game-button.active { border-color: var(--mint); background: #203f3b; color: var(--mint); box-shadow: none; }
 .tool-button.start-game-button.active:hover { background: #2b5149; }
+.tool-button.start-game-button kbd { border: 2px solid currentColor; color: inherit; }
 .tool-button.stop-camera-button { border-color: #b91c1c; background: #b91c1c; color: #fff; }
 .tool-button.stop-camera-button:hover { border-color: #991b1b; background: #991b1b; color: #fff; }
-.tool-button.stop-camera-button kbd { border-color: rgba(255,255,255,.45); color: #fff; }
+.tool-button.stop-camera-button kbd { border: 2px solid currentColor; color: inherit; }
 
 .canvas-wrap { position: relative; overflow: hidden; background: #dceaf0; }
 .free-draw-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); color: #aab9c7; font-size: 12px; }
