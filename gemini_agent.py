@@ -40,7 +40,8 @@ class AgentError(Exception):
 
 
 def request_routes(layout, feedback, api_key, model):
-    moving = [index for index, cloud in enumerate(layout["clouds"]) if cloud["vx"]]
+    moving = [index for index, cloud in enumerate(layout["clouds"])
+              if cloud["vx"] or cloud.get("vy", 0.0)]
     forecast = []
     if moving:
         for frame in flight_sim.forecast_clouds(layout):
@@ -184,7 +185,7 @@ def build_benchmark(layout, api_key, model):
         if refinement is not None:
             feedback.append(simulation_feedback(refinement, "predictive_refinement"))
     if best is None:
-        return {"status": "unavailable", "message": "You delivered! Gemini did not find a flyable route this round.",
+        return {"status": "unavailable", "message": "Gemini did not find a flyable route this round. Retry or continue to the next level.",
                 "tested": tested, "refined": refined}
     return {"status": "ready", "model": model, "tested": tested, "refined": refined, **best}
 
@@ -196,7 +197,7 @@ class BenchmarkJob:
         self.done = threading.Event()
         api_key, model = gemini_settings(DEFAULT_MODEL)
         if not api_key:
-            self.result = {"status": "disabled", "message": "AI comparison is off for this session. Your delivery counts; retry or continue to the next level."}
+            self.result = {"status": "disabled", "message": "AI comparison is off for this session. Retry or continue to the next level."}
         elif not re.fullmatch(r"gemini-[a-zA-Z0-9.\-]+", model):
             self.result = {"status": "unavailable", "message": "Check GEMINI_MODEL on the server."}
         elif not _slots.acquire(blocking=False):

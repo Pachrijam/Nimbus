@@ -131,7 +131,7 @@ finished faster and the time difference in seconds. Both flight times, the time
 gap, and your best time on this level appear below. Close finishes are labeled
 "Nearly tied" while the headline still shows who was faster.
 This is the **best verified route**, including
-predictive refinements on moving-cloud levels, not
+collision-avoiding refinements on stationary and moving-cloud levels, not
 a mathematically guaranteed optimal path. Gemini's machine learning generates
 the routes; the simulator computes every metric, not the model.
 
@@ -141,7 +141,8 @@ same movement and edge-bounce rules as the game. Simulation feedback includes
 the time and position of collisions and each cloud's closest encounter.
 
 After each proposal batch, a bounded planner tries detours around predicted
-collision locations. It forecasts where the cloud will be at the detour's
+collision locations, including stationary clouds when the player's route crashes.
+It forecasts where the cloud will be at the detour's
 estimated entry and exit times, then re-simulates the entire route with wind,
 turn limits, smoothing, and every other cloud. Failed detours can be repaired
 again using their new collision times. Routes may cross a cloud's initial

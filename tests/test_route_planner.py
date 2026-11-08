@@ -101,14 +101,43 @@ class PredictivePlanningTests(unittest.TestCase):
         self.assertIsNotNone(result["best"])
         self.assertEqual(result["best"]["outcome"]["state"], "LANDED")
 
-    def test_search_budget_is_enforced_and_static_levels_skip_repairs(self):
+    def test_search_budget_is_enforced(self):
         scene = layout([(480, 300, 45, -30), (600, 225, 45, -25), (600, 375, 45, -25)])
         node = route_planner.evaluate([scene["pad"], scene["star"]], scene)
         self.assertEqual(route_planner.refine_routes([node], scene, max_simulations=3)["tested"], 3)
         self.assertEqual(route_planner.refine_routes([node], scene, max_simulations=0)["tested"], 0)
-        for cloud in scene["clouds"]:
-            cloud["vx"] = 0
-        self.assertEqual(route_planner.refine_routes([node], scene)["tested"], 0)
+
+    def test_static_collision_returns_fastest_verified_detour(self):
+        scene = layout([(480, 300, 45, 0)], wind=(0, 0))
+        original = copy.deepcopy(scene)
+        node = route_planner.evaluate([scene["pad"], scene["star"]], scene)
+        self.assertEqual(node["outcome"]["state"], "CRASHED")
+        evaluated = []
+        evaluate = route_planner.evaluate
+
+        def record(points, layout):
+            trial = evaluate(points, layout)
+            evaluated.append(trial)
+            return trial
+
+        with patch("route_planner.evaluate", side_effect=record):
+            result = route_planner.refine_routes([node], scene)
+        successful = [trial for trial in evaluated if trial["outcome"]["state"] == "LANDED"]
+        self.assertGreater(len(successful), 1)
+        self.assertEqual(result["best"]["outcome"]["time"],
+                         min(trial["outcome"]["time"] for trial in successful))
+        self.assertEqual(flight_sim.simulate(result["best"]["route"], scene)["state"], "LANDED")
+        self.assertLessEqual(result["tested"], route_planner.MAX_REFINEMENTS_PER_ROUND)
+        self.assertEqual(scene, original)
+
+    def test_repairs_vertical_only_cloud_collision(self):
+        scene = layout([(480, 200, 45, 0)], wind=(0, 0))
+        scene["clouds"][0]["vy"] = 40
+        node = route_planner.evaluate([scene["pad"], scene["star"]], scene)
+        self.assertEqual(node["outcome"]["state"], "CRASHED")
+        result = route_planner.refine_routes([node], scene)
+        self.assertIsNotNone(result["best"])
+        self.assertEqual(flight_sim.simulate(result["best"]["route"], scene)["state"], "LANDED")
 
     def test_impossible_scene_does_not_invent_a_success(self):
         scene = layout([(200, 300, 500, 1)])

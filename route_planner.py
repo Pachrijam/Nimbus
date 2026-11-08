@@ -87,11 +87,11 @@ def _detours(node, layout, forecast):
 def refine_routes(seeds, layout, *, max_simulations=MAX_REFINEMENTS_PER_ROUND):
     """Repair collisions, keeping only routes verified to land in the full simulator.
 
-    Static-only levels retain the existing Gemini workflow. No waiting, teleporting,
-    or different drone controls are introduced to make an AI route succeed.
+    Stationary and moving clouds use the same collision-repair search. No waiting,
+    teleporting, or different drone controls are introduced to make a route succeed.
     """
     result = {"best": None, "feedback": None, "tested": 0}
-    if max_simulations <= 0 or not any(cloud["vx"] for cloud in layout["clouds"]):
+    if max_simulations <= 0:
         return result
     queue = []
     seen = set()

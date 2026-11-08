@@ -94,6 +94,15 @@ class GeminiTests(unittest.TestCase):
         self.assertEqual(feedback[-1]["state"], "LANDED")
         self.assertEqual(flight_sim.simulate(result["route"], self.layout)["trajectory"], result["trajectory"])
 
+    def test_prompt_forecasts_clouds_moving_only_vertically(self):
+        self.layout["clouds"][0].update(y=200, vx=0, vy=40)
+        with patch("gemini_agent.urlopen", return_value=self.response([SAFE_ROUTE])) as call:
+            gemini_agent.request_routes(self.layout, [], "key", "gemini-test")
+        prompt = json.loads(call.call_args.args[0].data)["contents"][0]["parts"][0]["text"]
+        forecast = json.loads(prompt.split("\n", 1)[1])["future_cloud_positions"]
+        self.assertEqual(forecast[0]["positions"][0]["y"], 200)
+        self.assertAlmostEqual(forecast[1]["positions"][0]["y"], 240)
+
     def test_two_rounds_keep_api_and_simulation_budgets(self):
         self.layout["clouds"][0]["vx"] = -30
         with patch("gemini_agent.request_routes", return_value=[DIRECT_ROUTE]) as request:
@@ -125,7 +134,7 @@ class GeminiTests(unittest.TestCase):
         with patch("gemini_agent.request_routes", side_effect=[[DIRECT_ROUTE], [SAFE_ROUTE]]) as request:
             benchmark = gemini_agent.build_benchmark(self.layout, "key", "gemini-test")
         self.assertEqual(benchmark["status"], "ready")
-        self.assertEqual(benchmark["tested"], 2)
+        self.assertEqual(benchmark["tested"], 2 + benchmark["refined"])
         self.assertEqual(request.call_args_list[1].args[1][0]["state"], "CRASHED")
         outcome = flight_sim.simulate(benchmark["route"], self.layout)
         self.assertEqual(outcome["state"], "LANDED")
@@ -142,10 +151,12 @@ class GeminiTests(unittest.TestCase):
             gemini_agent.validate_route(DIRECT_ROUTE, layout), layout)["time"])
 
     def test_no_valid_route_has_no_fabricated_ai_score(self):
+        self.layout["clouds"] = [{"x": PAD[0], "y": PAD[1], "r": 500, "vx": 0}]
         with patch("gemini_agent.request_routes", return_value=[DIRECT_ROUTE, {}]):
             result = gemini_agent.build_benchmark(self.layout, "key", "gemini-test")
         self.assertEqual(result["status"], "unavailable")
         self.assertNotIn("time", result)
+        self.assertNotIn("You delivered", result["message"])
 
     def test_missing_key_does_not_make_a_request(self):
         with patch("gemini_agent.urlopen") as request:
@@ -269,6 +280,29 @@ class GeminiTests(unittest.TestCase):
         self.assertTrue(snapshot["trajectory"])
         self.assertEqual(snapshot["launchClouds"], self.flight.cloud_layout)
         json.dumps(snapshot, allow_nan=False)
+
+    def test_player_cloud_collision_produces_verified_route_even_when_gemini_proposals_crash(self):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}), patch(
+                "gemini_agent.request_routes", return_value=[DIRECT_ROUTE]) as request:
+            self.fly(self.flight, DIRECT_ROUTE)
+            self.assertEqual(self.flight.state, "CRASHED")
+            job = self.flight.benchmark_job
+            self.assertTrue(job.done.wait(10))
+            self.assertEqual(request.call_count, 2)
+
+        result = self.flight.comparison()
+        self.assertEqual(result["status"], "ready")
+        self.assertTrue(result["aiRescued"])
+        self.assertGreater(result["refined"], 0)
+        verified = flight_sim.simulate(job.result["route"], self.layout)
+        self.assertEqual(verified["state"], "LANDED")
+        self.assertEqual(verified["time"], result["aiTime"])
+        self.assertEqual(verified["trajectory"], job.result["trajectory"])
+        self.assertEqual(self.flight.score, 0)
+        self.assertIsNone(self.flight.best_time)
+        self.assertNotIn("verdict", result)
+        self.flight.retry()
+        self.assertIs(self.flight.benchmark_job, job)
 
 
 if __name__ == "__main__":
