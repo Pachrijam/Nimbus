@@ -81,7 +81,7 @@ h1 {
 }
 
 h1 span { color: #8ca2b6; }
-.intro-copy { max-width: 590px; margin: 9px 0 0; color: #b0bfcd; font-size: 13px; line-height: 1.65; }
+.intro-copy { max-width: 590px; margin: 9px 0 0; color: #a5b5c4; font-size: 12px; line-height: 1.6; }
 
 .game-panel { overflow: hidden; border: 1px solid rgba(159, 184, 207, .19); border-radius: 12px; background: var(--panel); box-shadow: 0 20px 70px rgba(0, 0, 0, .22); }
 .toolbar { min-height: 54px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 13px; border-bottom: 1px solid var(--line); }
@@ -185,7 +185,7 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
   .brand { font-size: 45px; }
   .topbar-note { font-size: 0; }
   .intro { align-items: start; padding: 22px 0 16px; }
-  .intro-copy { font-size: 13px; }
+  .intro-copy { font-size: 12px; }
   .toolbar { padding: 7px; flex-wrap: wrap; }
   .input-controls { width: 100%; }
   .start-game-button, .stop-camera-button { width: 100%; }
@@ -208,7 +208,7 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 .mission-hud { display: flex; align-items: center; gap: 28px; padding: 12px 24px; border-bottom: 1px solid rgba(120,226,189,.16); background: linear-gradient(110deg, #122938, #10202e); flex-shrink: 0; }
 .mission-chip { display: flex; flex-direction: column; flex-shrink: 0; align-items: center; justify-content: center; gap: 7px; min-width: 120px; padding-right: 28px; border-right: 1px solid rgba(159,184,207,.22); }
 .hud-label, .hud-stats dt { color: #a9bac8; font: 600 11px/1.4 var(--ui-font); letter-spacing: .08em; text-transform: uppercase; }
-.mission-chip strong { color: #ffc758; font: 400 30px/1 "Nimbus Segments", "Rajdhani", sans-serif; letter-spacing: 2px; font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
+.mission-chip strong { color: #ffc758; font: 400 26px/1 "Nimbus Segments", "Rajdhani", sans-serif; letter-spacing: 1px; font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
 .hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 28px; flex: 1; min-width: 0; margin: 0; text-align: center; }
 .hud-stats dd { margin: 5px 0 0; color: #edf4fa; font: 600 14px/1.4 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; letter-spacing: 0; white-space: nowrap; }
 #hud-score, #hud-attempts { font: 600 25px/1.1 "Rajdhani", var(--ui-font); }
