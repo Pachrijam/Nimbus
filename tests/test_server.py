@@ -29,7 +29,7 @@ class EngineTests(unittest.TestCase):
             flight.star = (840, 300)
             flight.cloud_layout = []
             flight.retry()
-        inputs = [event("DRAW", {"x": x, "y": 300}) for x in range(90, 841, 15)]
+        inputs = [event("DRAW", {"x": x, "y": 300}) for x in range(direct.pad[0], 841, 15)]
         inputs += [event()] * 240
         for item in inputs:
             clean = validate_events([item])
@@ -51,6 +51,35 @@ class EngineTests(unittest.TestCase):
         session.update(validate_events([{"action": "retry"}]))
         self.assertEqual(session.game.state, "READY")
         self.assertEqual(session.game.clouds, session.game.cloud_layout)
+
+    def test_drawing_waits_for_cursor_to_overlap_drone(self):
+        for gesture_input in (False, True):
+            with self.subTest(gesture_input=gesture_input):
+                flight = game.Game(960, 600, headless=True)
+                x, y = flight.pad
+                for dx, dy in ((90, 0), (19, 0), (-19, 0), (0, 19), (0, -19), (14, 14)):
+                    flight.update("DRAW", (x + dx, y + dy), 0.02,
+                                  gesture_input=gesture_input)
+                    self.assertEqual(flight.state, "READY")
+                    self.assertEqual(flight.raw_path, [])
+                flight.update("HOVER", flight.pad, 0.02, gesture_input=gesture_input)
+                self.assertEqual(flight.state, "READY")
+                flight.update("DRAW", flight.pad, 0.02, gesture_input=gesture_input)
+                self.assertEqual(flight.state, "DRAWING")
+                self.assertEqual(flight.raw_path, [flight.pad])
+                # Once started, the route can extend beyond the drone.
+                flight.update("DRAW", (x + 100, y), 0.02, gesture_input=gesture_input)
+                self.assertEqual(flight.raw_path[-1], (x + 100, y))
+                flight.retry()
+                flight.update("DRAW", (x + 100, y), 0.02, gesture_input=gesture_input)
+                self.assertEqual(flight.state, "READY")
+
+    def test_drawing_can_start_at_edge_of_drone(self):
+        flight = game.Game(960, 600, headless=True)
+        point = (flight.pad[0] + 18, flight.pad[1])
+        flight.update("DRAW", point, 0.02, gesture_input=True)
+        self.assertEqual(flight.state, "DRAWING")
+        self.assertEqual(flight.raw_path, [flight.pad, point])
 
     def test_hand_trackers_are_isolated_and_mirrored(self):
         first, second = Session(), Session()

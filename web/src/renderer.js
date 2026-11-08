@@ -229,25 +229,28 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.font = "12px 'DM Sans', sans-serif";
     ctx.fillText(`ATTEMPTS ${game.tries}`, 174, 73);
 
-    const start = { x: 342, y: 50 };
+    const windCenter = { x: 364, y: 43 };
     const length = Math.hypot(game.wind.x, game.wind.y);
     const angle = length > 1 ? Math.atan2(game.wind.y, game.wind.x) : 0;
-    const end = { x: start.x + Math.cos(angle) * (18 + length * 0.35), y: start.y + Math.sin(angle) * (18 + length * 0.35) };
+    const halfLength = Math.min(40, 30 + length * 0.35) / 2;
+    const start = { x: windCenter.x - Math.cos(angle) * halfLength, y: windCenter.y - Math.sin(angle) * halfLength };
+    const end = { x: windCenter.x + Math.cos(angle) * halfLength, y: windCenter.y + Math.sin(angle) * halfLength };
     ctx.strokeStyle = "rgba(255,255,255,.8)";
     ctx.fillStyle = "rgba(255,255,255,.8)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);
-    ctx.lineTo(end.x - 6 * Math.cos(angle - 0.5), end.y - 6 * Math.sin(angle - 0.5));
-    ctx.lineTo(end.x - 6 * Math.cos(angle + 0.5), end.y - 6 * Math.sin(angle + 0.5));
+    ctx.lineTo(end.x - 9 * Math.cos(angle - 0.5), end.y - 9 * Math.sin(angle - 0.5));
+    ctx.lineTo(end.x - 9 * Math.cos(angle + 0.5), end.y - 9 * Math.sin(angle + 0.5));
     ctx.closePath();
     ctx.fill();
-    ctx.font = "10px 'DM Mono', monospace";
-    ctx.fillText("WIND", 330, 79);
+    ctx.font = "500 14px 'DM Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("WIND", windCenter.x, 82);
     ctx.restore();
   }
 
