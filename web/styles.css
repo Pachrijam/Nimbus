@@ -1,5 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Rajdhani:wght@500;600&family=Space+Grotesk:wght@700&display=swap");
 
+/* Original vector digits, served locally so the mission display is consistent. */
+@font-face {
+  font-family: "Nimbus Segments";
+  src: url("./fonts/nimbus-segments.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --ui-font: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -196,19 +205,19 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 }
 
 /* A compact flight-instrument strip, kept outside the playable canvas. */
-.mission-hud { display: flex; align-items: center; gap: 32px; padding: 10px 20px; border-bottom: 1px solid rgba(120,226,189,.16); background: linear-gradient(110deg, #122938, #10202e); flex-shrink: 0; }
-.mission-chip { display: flex; flex-shrink: 0; align-items: center; gap: 14px; min-width: 142px; padding-right: 28px; border-right: 1px solid rgba(159,184,207,.22); }
+.mission-hud { display: flex; align-items: center; gap: 28px; padding: 12px 24px; border-bottom: 1px solid rgba(120,226,189,.16); background: linear-gradient(110deg, #122938, #10202e); flex-shrink: 0; }
+.mission-chip { display: flex; flex-direction: column; flex-shrink: 0; align-items: center; justify-content: center; gap: 7px; min-width: 120px; padding-right: 28px; border-right: 1px solid rgba(159,184,207,.22); }
 .hud-label, .hud-stats dt { color: #a9bac8; font: 600 11px/1.4 var(--ui-font); letter-spacing: .08em; text-transform: uppercase; }
-.mission-chip strong { color: #ffc758; font: 600 32px/1 "Rajdhani", var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
-.hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 28px; flex: 1; min-width: 0; max-width: 680px; margin: 0; }
+.mission-chip strong { color: #ffc758; font: 400 30px/1 "Nimbus Segments", "Rajdhani", sans-serif; letter-spacing: 2px; font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
+.hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 28px; flex: 1; min-width: 0; margin: 0; text-align: center; }
 .hud-stats dd { margin: 5px 0 0; color: #edf4fa; font: 600 14px/1.4 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; letter-spacing: 0; white-space: nowrap; }
 #hud-score, #hud-attempts { font: 600 25px/1.1 "Rajdhani", var(--ui-font); }
 #hud-score { color: #ffe09a; }
-.hud-wind { display: flex; align-items: center; gap: 8px; }
+.hud-wind { display: flex; align-items: center; justify-content: center; gap: 8px; }
 #hud-wind-arrow { flex-shrink: 0; transform-origin: center; color: var(--mint); }
 @media (max-width: 700px) {
   .mission-hud { gap: 20px; padding: 10px 14px; }
-  .mission-chip { flex-direction: column; gap: 4px; min-width: 76px; padding-right: 16px; }
+  .mission-chip { gap: 7px; min-width: 76px; padding-right: 16px; }
   .hud-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
   .hud-stats > div:last-child { grid-column: 1 / -1; }
   .hud-stats dd { font-size: 13px; }
