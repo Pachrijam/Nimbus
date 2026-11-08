@@ -33,6 +33,19 @@ def depth_hand(*, tilt=0, scale=1, middle=False, folded=False, aspect=1):
     ) for p in hand(middle=middle, folded=folded)]
 
 
+def tucked_thumb_hand(*, middle=False, tilt=0, scale=1, aspect=1, mirrored=False):
+    pose = hand(middle=middle)
+    # A thumb resting across the palm is still farther from the wrist than
+    # its MCP. Wrist distance alone incorrectly counts it as a raised finger.
+    pose[4] = SimpleNamespace(x=0.53, y=0.64)
+    c, s = math.cos(tilt), math.sin(tilt)
+    return [SimpleNamespace(
+        x=0.5 + (-1 if mirrored else 1) * scale * (p.x - 0.5) / aspect,
+        y=0.7 + scale * (p.y - 0.9) * c,
+        z=scale * (p.y - 0.9) * s / aspect,
+    ) for p in pose]
+
+
 class GestureTests(unittest.TestCase):
     def setUp(self):
         self.tracker = {}
@@ -53,6 +66,21 @@ class GestureTests(unittest.TestCase):
     def test_folded_index_does_not_draw(self):
         for angle in (0, math.pi / 2, math.pi):
             self.assertEqual(self.sample(hand(folded=True, angle=angle), 10)[0], "IDLE")
+
+    def test_tucked_thumb_allows_drawing_at_different_depths(self):
+        for tilt in (0, math.pi / 3, math.pi / 2):
+            for scale in (0.2, 1):
+                for mirrored in (False, True):
+                    with self.subTest(tilt=tilt, scale=scale, mirrored=mirrored):
+                        gestures.reset_gesture(self.tracker)
+                        pose = tucked_thumb_hand(tilt=tilt, scale=scale, mirrored=mirrored)
+                        self.assertEqual(self.sample(pose, 10)[0], "DRAW")
+
+    def test_lowering_thumb_after_hover_resumes_drawing(self):
+        self.assertEqual(self.sample(hand(thumb=True), 3)[0], "HOVER")
+        self.assertEqual(self.sample(tucked_thumb_hand(), 3)[0], "DRAW")
+        self.assertEqual(self.sample(tucked_thumb_hand(middle=True), 6)[0], "HOVER")
+        self.assertEqual(self.sample(tucked_thumb_hand(), 3)[0], "DRAW")
 
     def test_brief_loss_holds_position_then_recovers(self):
         drawing = self.sample(hand(), 3)

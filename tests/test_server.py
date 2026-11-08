@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 import game
 import gestures
 from server import GameServer, Session, validate_events
-from test_gestures import depth_hand
+from test_gestures import depth_hand, tucked_thumb_hand
 
 
 def event(mode="IDLE", point=None, dt=0.02, **kwargs):
@@ -333,6 +333,27 @@ class HTTPTests(unittest.TestCase):
             urlopen(self.url + "/../server.py", timeout=5)
         self.assertEqual(error.exception.code, 404)
         error.exception.close()
+
+    def test_free_draw_recovers_from_hover_with_tucked_thumb(self):
+        response = self.post("/api/session", {})
+        token, initial = response["session"], response["game"]
+        positions = []
+        for middle, offset, expected in ((True, 0, "HOVER"), (False, 0, "DRAW"),
+                                          (False, 0.1, "DRAW"), (True, 0.1, "HOVER"),
+                                          (False, 0.1, "DRAW")):
+            pose = tucked_thumb_hand(tilt=1.0, aspect=4 / 3, middle=middle)
+            landmarks = [{"x": 1 - (p.x + offset), "y": p.y, "z": p.z} for p in pose]
+            response = self.post("/api/update", {"session": token, "events": [
+                event(landmarks=landmarks, cameraAspect=4 / 3, paused=True, dt=0.05)
+            ] * 6})
+            snapshot = response["game"]
+            self.assertEqual(snapshot["cursor"]["mode"], expected)
+            self.assertIsNotNone(snapshot["cursor"]["point"])
+            positions.append(snapshot["cursor"]["point"])
+            # Free Draw must keep updating the pen while the mission is paused.
+            self.assertEqual({k: v for k, v in snapshot.items() if k != "cursor"},
+                             {k: v for k, v in initial.items() if k != "cursor"})
+        self.assertGreater(positions[2]["x"], positions[1]["x"])
 
     def test_cloud_crash_returns_visible_route_through_http_without_gemini(self):
         # Exercise the same request/snapshot flow as the deployed browser,

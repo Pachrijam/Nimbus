@@ -19,6 +19,7 @@ import math
 
 # MediaPipe landmark numbers
 WRIST = 0
+INDEX_MCP = 5
 INDEX_PIP = 6
 INDEX_TIP = 8
 MIDDLE_PIP = 10
@@ -44,6 +45,11 @@ MIDDLE_UP_RATIO = 1.35    # middle must be clearly up -> fewer accidental launch
 # Hysteresis keeps uncertain finger estimates from toggling the gesture.
 INDEX_DOWN_RATIO = 0.85   # tolerate depth noise while the index is already extended
 MIDDLE_DOWN_RATIO = 1.10
+
+# A tucked thumb can pass the wrist-distance test. It must also clear the
+# index knuckle, measured in palm lengths so camera distance does not matter.
+THUMB_OPEN_RATIO = 0.65
+THUMB_CLOSE_RATIO = 0.55
 
 # The thumb bends at its MCP; the other fingers bend at their PIP joints.
 RELEASE_FINGERS = (
@@ -187,7 +193,13 @@ def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None)
     raised_count = int(index_up)
     for key, finger_tip, joint in RELEASE_FINGERS:
         threshold = MIDDLE_DOWN_RATIO if state[key] else MIDDLE_UP_RATIO
-        state[key] = finger_ratio(landmarks, finger_tip, joint, aspect, 1) > threshold
+        extended = finger_ratio(landmarks, finger_tip, joint, aspect, 1) > threshold
+        if key == "thumb_up":
+            palm_length = pixel_dist(landmarks[WRIST], landmarks[INDEX_MCP], aspect, 1)
+            clearance = pixel_dist(landmarks[THUMB_TIP], landmarks[INDEX_MCP], aspect, 1)
+            thumb_threshold = THUMB_CLOSE_RATIO if state[key] else THUMB_OPEN_RATIO
+            extended = extended and palm_length > 1e-9 and clearance > thumb_threshold * palm_length
+        state[key] = extended
         raised_count += int(state[key])
 
     if raised_count >= 2:
