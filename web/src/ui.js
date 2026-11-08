@@ -34,8 +34,10 @@ export function createUI({ canvas, statusText, toast }) {
           : `Gemini delivered ${gap} s faster. Study the dashed route and try again.`;
     }
     write("comparison-message", message);
+    const planner = result.planner === "gemini_predictive"
+      ? "Gemini + predictive cloud planning. " : "";
     write("comparison-note", ready
-      ? `Best of ${result.tested} simulated Gemini routes, not a guaranteed optimum. AI performance = Gemini time ÷ your time; 100% is equal, above 100% is faster. Matched means within 5% of AI performance.`
+      ? `${planner}Best of ${result.tested} simulated routes (${result.refined ?? 0} time-aware refinements), not a guaranteed optimum. AI performance = Gemini time ÷ your time; 100% is equal, above 100% is faster. Matched means within 5% of AI performance.`
       : disabled
         ? "Your score and best flight time are saved for this level. Press N or choose Next level to continue."
         : "Gemini's routes are tested with the same wind, moving storms, and flight physics. Your delivery is saved for this level.");

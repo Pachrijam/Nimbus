@@ -54,6 +54,10 @@ def main():
       check(replayButton.disabled, 'cannot replay while planning');
       ui.applySnapshot(state,snapshot); check(!panel.classList.contains('hidden'),'visible');
       check(document.querySelector('#match-percent').textContent === '100.0%','score');
+      ui.applySnapshot(state,{...snapshot,comparison:{...snapshot.comparison,planner:'gemini_predictive',refined:12,tested:14}});
+      check(document.querySelector('#comparison-note').textContent.includes('Gemini + predictive cloud planning'), 'refined route attribution');
+      check(document.querySelector('#comparison-note').textContent.includes('12 time-aware refinements'), 'refinement count');
+      ui.applySnapshot(state,snapshot);
       check(!replayButton.disabled, 'ready to replay');
       replayButton.click(); check(state.geminiReplay === 1 && events.length === 0, 'replay does not change the game');
       document.querySelector('#challenge-retry').click(); document.querySelector('#challenge-next').click();
@@ -97,7 +101,7 @@ def main():
       renderer.render({...state,game:pending},false,0);
       check(labels.some(text => text.includes('Gemini is planning')), 'planning visible on field');
       renderer.render({...state,game:disabled},false,0);
-      check(labels.includes('Not configured'), 'failure visible on field');
+      check(labels.some(text => text.startsWith('AI comparison is off.')), 'disabled comparison visible on field');
       for (let time = 0; time <= 2000; time += 100) renderer.render(state,false,time);
       check(labels.includes('GEMINI') && labels.some(text => text.startsWith('Watch Gemini fly:')), 'animated drone and timer visible');
       context.fillText = fillText;

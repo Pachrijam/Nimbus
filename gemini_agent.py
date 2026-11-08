@@ -1,7 +1,8 @@
 """Server-only Gemini route proposals, verified in the game's real simulator.
 
 No model-reported scores are trusted. At most two requests are made per level;
-the fastest successful proposal is the benchmark, not a global optimum.
+the fastest successful proposal or predictive refinement is the benchmark,
+not a global optimum.
 """
 import json
 import math
@@ -13,6 +14,7 @@ from urllib.request import Request, urlopen
 import flight_sim
 import paths
 import physics
+import route_planner
 from settings import gemini_settings
 
 DEFAULT_MODEL = "gemini-2.5-flash"
@@ -38,6 +40,13 @@ class AgentError(Exception):
 
 
 def request_routes(layout, feedback, api_key, model):
+    moving = [index for index, cloud in enumerate(layout["clouds"]) if cloud["vx"]]
+    forecast = []
+    if moving:
+        for frame in flight_sim.forecast_clouds(layout):
+            forecast.append({"time": frame["time"], "positions": [
+                {"cloud_index": index, "x": round(frame["clouds"][index]["x"], 2),
+                 "y": frame["clouds"][index]["y"]} for index in moving]})
     prompt = (
         "You are the rival drone pilot in Nimbus. Minimize flight time to the destination. "
         "Propose 4 to 6 diverse routes as JSON. Each waypoints list includes the exact pad "
@@ -48,11 +57,17 @@ def request_routes(layout, feedback, api_key, model):
         "The drone starts heading right. Routes undergo two Chaikin smoothing passes and "
         "8px resampling before pure-pursuit flight. Leave clearance for turn limits and "
         "corner cutting. Explore above and below obstacles, with gradual turns. "
+        "Plan crossings using the supplied future_cloud_positions (seconds since launch), "
+        "not only the clouds' initial positions. Estimate your arrival times with wind and turns. "
+        "The drone cannot stop or wait; change route geometry to change arrival time. "
+        "Forecast samples are guidance: the simulator checks collisions every 1/60 second. "
+        "Previous simulations include closest encounters and collision positions at their actual times. "
         "Landing occurs within 28px of the star. Return routes only, never invent scores.\n"
         + json.dumps({"level": layout, "flight": {
             "speed": physics.SPEED, "max_turn_radians_per_second": physics.MAX_TURN,
             "lookahead": physics.LOOKAHEAD, "steering_gain": physics.K_STEER,
-            "physics_enabled": physics.USE_PHYSICS}, "previous_simulations": feedback})
+            "physics_enabled": physics.USE_PHYSICS}, "future_cloud_positions": forecast,
+            "previous_simulations": feedback})
     )
     payload = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
                "generationConfig": {"responseMimeType": "application/json",
@@ -113,10 +128,27 @@ def validate_route(candidate, layout):
     return paths.resample(paths.chaikin(raw))
 
 
+def simulation_feedback(node, source="gemini"):
+    outcome = node["outcome"]
+    return {"waypoints": [{"x": x, "y": y} for x, y in node["waypoints"]],
+            "source": source, "state": outcome["state"], "time": round(outcome["time"], 3),
+            "end_position": outcome["trajectory"][-1],
+            "collision": outcome.get("collision"), "encounters": outcome.get("encounters", [])}
+
+
 def build_benchmark(layout, api_key, model):
     best = None
     feedback = []
     tested = 0
+    refined = 0
+
+    def consider(node, planner):
+        nonlocal best
+        outcome = node["outcome"]
+        if outcome["state"] == "LANDED" and (best is None or outcome["time"] < best["time"]):
+            best = {"time": outcome["time"], "distance": outcome["distance"],
+                    "trajectory": outcome["trajectory"], "route": node["route"], "planner": planner}
+
     for _ in range(2):
         try:
             proposals = request_routes(layout, feedback, api_key, model)
@@ -125,24 +157,33 @@ def build_benchmark(layout, api_key, model):
                 break  # Keep a verified result if refinement is unavailable.
             raise
         feedback = []
+        seeds = []
         for proposal in proposals:
             try:
                 route = validate_route(proposal, layout)
             except (ValueError, KeyError, TypeError, OverflowError):
                 feedback.append({"state": "INVALID", "hint": "Use bounded numeric waypoints from pad to star."})
                 continue
-            outcome = flight_sim.simulate(route, layout)
+            outcome = flight_sim.simulate(route, layout, diagnostics=True)
             tested += 1
-            feedback.append({"waypoints": proposal["waypoints"], "state": outcome["state"],
-                             "time": round(outcome["time"], 3),
-                             "end_position": outcome["trajectory"][-1]})
-            if outcome["state"] == "LANDED" and (best is None or outcome["time"] < best["time"]):
-                best = {"time": outcome["time"], "distance": outcome["distance"],
-                        "trajectory": outcome["trajectory"], "route": route}
+            waypoints = [(point["x"], point["y"]) for point in proposal["waypoints"]]
+            waypoints[0], waypoints[-1] = tuple(layout["pad"]), tuple(layout["star"])
+            node = {"waypoints": waypoints, "route": route, "outcome": outcome}
+            seeds.append(node)
+            feedback.append(simulation_feedback(node))
+            consider(node, "gemini")
+        planning = route_planner.refine_routes(seeds, layout)
+        tested += planning["tested"]
+        refined += planning["tested"]
+        if planning["best"] is not None:
+            consider(planning["best"], "gemini_predictive")
+        refinement = planning["best"] or planning["feedback"]
+        if refinement is not None:
+            feedback.append(simulation_feedback(refinement, "predictive_refinement"))
     if best is None:
         return {"status": "unavailable", "message": "You delivered! Gemini did not find a flyable route this round.",
-                "tested": tested}
-    return {"status": "ready", "model": model, "tested": tested, **best}
+                "tested": tested, "refined": refined}
+    return {"status": "ready", "model": model, "tested": tested, "refined": refined, **best}
 
 
 class BenchmarkJob:

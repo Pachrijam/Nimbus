@@ -264,6 +264,8 @@ class Game:
                            "matchPercent": round(100 * ratio, 1), "timeDelta": delta,
                            "verdict": verdict, "model": benchmark["model"],
                            "tested": benchmark["tested"],
+                           "planner": benchmark.get("planner", "gemini"),
+                           "refined": benchmark.get("refined", 0),
                            "aiTrajectory": [{"x": x, "y": y} for x, y in benchmark["trajectory"]]})
         return result
  
