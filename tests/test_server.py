@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+import time
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
@@ -332,6 +333,36 @@ class HTTPTests(unittest.TestCase):
             urlopen(self.url + "/../server.py", timeout=5)
         self.assertEqual(error.exception.code, 404)
         error.exception.close()
+
+    def test_cloud_crash_returns_visible_route_through_http_without_gemini(self):
+        # Exercise the same request/snapshot flow as the deployed browser,
+        # including background planning and subsequent polling.
+        with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
+            response = self.post("/api/session", {})
+            token = response["session"]
+            pad, star = response["game"]["pad"], response["game"]["star"]
+            inputs = [event("DRAW", {"x": x, "y": pad["y"]})
+                      for x in range(pad["x"], star["x"] + 1, 15)]
+            inputs.append(event())
+            response = self.post("/api/update", {"session": token, "events": inputs})
+            self.assertEqual(response["game"]["state"], "FLYING")
+            response = self.post("/api/update", {"session": token, "events": [event(dt=0.05)] * 120})
+            self.assertEqual(response["game"]["state"], "CRASHED")
+            deadline = time.monotonic() + 5
+            while response["game"]["comparison"]["status"] == "pending" and time.monotonic() < deadline:
+                time.sleep(0.02)
+                response = self.post("/api/update", {"session": token, "events": [event()]})
+
+            comparison = response["game"]["comparison"]
+            self.assertEqual(comparison["status"], "ready")
+            self.assertEqual(comparison["planner"], "local")
+            trajectory = comparison["aiTrajectory"]
+            self.assertGreater(len(trajectory), 2)
+            self.assertEqual(trajectory[0], pad)
+            self.assertLessEqual((trajectory[-1]["x"] - star["x"]) ** 2
+                                 + (trajectory[-1]["y"] - star["y"]) ** 2,
+                                 response["game"]["starRadius"] ** 2)
+            self.assertEqual(response["game"]["score"], 0)
 
 
 if __name__ == "__main__":
