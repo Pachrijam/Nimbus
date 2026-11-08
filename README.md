@@ -6,53 +6,85 @@
 
 ```text
 .
-├── main.py                 # Desktop OpenCV application entry point
-├── server.py               # HTTP API and per-browser game sessions
-├── game.py                 # Game states, levels, scoring, and collisions
-├── physics.py              # Flight movement and steering
-├── paths.py                # Route smoothing, resampling, and turn checks
-├── gestures.py             # Hand landmark gesture recognition and smoothing
-├── visuals.py              # Desktop game rendering
-├── freedraw.py             # Desktop free-draw mode
-├── requirements.txt        # Python dependencies
-├── hand_landmarker.task    # MediaPipe hand-tracking model for desktop use
+├── main.py                 # Desktop OpenCV entry point
+├── server.py               # Browser game server and per-tab session manager
+├── game.py                 # Level state, route evaluation, scoring, and result UI
+├── visuals.py              # Desktop rendering and HUD overlays
+├── freedraw.py             # Desktop free-draw mode and gesture handling
+├── gestures.py             # Camera gesture recognition and smoothing
+├── paths.py                # Route smoothing, resampling, and feasibility checks
+├── physics.py              # Pure-pursuit flight controller and turn-rate logic
+├── flight_sim.py           # Shared fixed-step simulator for live and verified flights
+├── route_planner.py        # Local route search and collision repair logic
+├── gemini_agent.py         # Gemini proposal + verification pipeline
+├── settings.py             # `.env`/environment loading for Gemini configuration
+├── requirements.txt        # Installable Python dependencies
+├── hand_landmarker.task    # MediaPipe hand model for desktop use
+├── .env                    # Local Gemini secrets (ignored by Git)
 ├── web/
-│   ├── index.html          # Browser page and controls
-│   ├── styles.css          # Browser layout and styling
+│   ├── index.html          # Browser layout and page shell
+│   ├── styles.css          # UI styling, HUD, modal, and game layout
 │   ├── images/
-│   │   └── favicon.png     # Nimbus browser icon
+│   │   ├── favicon.png     # Browser icon
+│   │   └── nimbus_image_preview.jpeg
 │   └── src/
-│       ├── app.js          # Connects client, camera, controls, UI, and renderer
-│       ├── camera.js       # Webcam access and MediaPipe hand landmarks
-│       ├── config.js       # Canvas dimensions
-│       ├── controls.js     # Hand tracking, keyboard, and free-draw controls
-│       ├── game-client.js  # Game session and update API requests
-│       ├── renderer.js     # Canvas game rendering
-│       └── ui.js           # Status messages and UI updates
+│       ├── app.js          # Top-level browser coordinator
+│       ├── camera.js       # Webcam input and MediaPipe landmark handling
+│       ├── camera-preview.js
+│       ├── canvas-resolution.js
+│       ├── config.js       # Canvas sizing and constants
+│       ├── controls.js     # Keyboard controls, buttons, and free-draw toggles
+│       ├── free-draw.js    # Browser ink drawing logic
+│       ├── game-client.js  # HTTP session updates and replay handling
+│       ├── hud.js          # HUD state and route comparison values
+│       ├── renderer.js     # Canvas drawing for the sky, drone, and routes
+│       ├── replay.js       # Replays for local/Gemini routes
+│       ├── start-zone.js   # Start-area layout and interaction checks
+│       └── ui.js           # Status text and result messaging
 ├── tests/
-│   ├── test_gestures.py    # Gesture recognition tests
-│   └── test_server.py      # Game engine and HTTP API tests
+│   ├── browser_check.py   # Browser smoke-check for desktop and narrow widths
+│   ├── camera-controls.test.mjs
+│   ├── canvas-resolution.test.mjs
+│   ├── hud.test.mjs
+│   ├── start-zone.test.mjs
+│   ├── test_freedraw.py
+│   ├── test_game_difficulty.py
+│   ├── test_gemini_agent.py
+│   ├── test_gestures.py
+│   ├── test_paths.py
+│   ├── test_route_planner.py
+│   ├── test_server.py
+│   ├── test_settings.py
+│   └── test_start_area.py
 └── docs/
-    ├── OVERVIEW.md         # Project overview and design
-    └── STEPS.md            # Development tasks and checkpoints
+    ├── OVERVIEW.md         # Problem, solution, design, and demo overview
+    └── STEPS.md            # Development plan and task checkpoints
 ```
 
 ### How the pieces fit together
 
-- **Browser:** `web/src/app.js` coordinates the camera, controls, game client,
-  UI, and renderer. `camera.js` processes webcam frames locally with MediaPipe;
-  only hand landmarks (not camera video) are sent to `server.py`. The server
-  creates an in-memory game session for each browser tab, recognizes gestures,
-  runs the shared game logic, and returns snapshots for `renderer.js` to draw.
-- **Shared game logic:** `game.py` manages levels, routes, collisions, and
-  scoring; `paths.py` smooths and resamples routes; `physics.py` moves the
-  aircraft; and `gestures.py` recognizes and smooths hand gestures. `server.py`
-  uses these modules for browser sessions.
-- **Desktop:** `main.py` captures webcam frames, runs MediaPipe hand tracking,
-  and updates either `game.Game` or `freedraw.FreeDraw`. `visuals.py` renders
-  the game with OpenCV.
+- **Browser runtime:** `web/src/app.js` coordinates the camera, controls, HUD,
+  replay, renderer, and session client. `camera.js` handles webcam frames locally;
+  only landmark coordinates are sent to `server.py`, never raw camera video.
+  The server creates an in-memory game session per browser tab, runs shared game
+  logic, and returns snapshots for the canvas.
+- **Shared game and flight logic:** `game.py` manages levels, route validation,
+  collisions, scoring, and benchmark results; `paths.py` smooths and resamples
+  routes; `physics.py` drives the pure-pursuit flight controller; and
+  `gestures.py` recognizes and smooths hand gestures. `flight_sim.py` provides the
+  deterministic fixed-step rules used by both live play and Gemini verification,
+  while `route_planner.py` performs the internal local search and collision-repair
+  planning used before or alongside AI proposals.
+- **AI comparison:** `gemini_agent.py` builds Gemini route proposals, verifies
+  them in the same flight simulator, and surfaces benchmark results and replay
+  data to the game. `settings.py` loads `GEMINI_API_KEY` and `GEMINI_MODEL` from
+  the repo root `.env` or process environment without exposing secrets to the web UI.
+- **Desktop mode:** `main.py` captures webcam frames, runs MediaPipe hand tracking,
+  and updates either `game.Game` or `freedraw.FreeDraw`. `visuals.py` renders the
+  game with OpenCV.
 - **Deployment:** Nginx provides HTTPS and reverse-proxies browser requests to
-  `server.py` on `127.0.0.1:8000`; HTTPS is needed for browser camera access.
+  `server.py` on `127.0.0.1:8000`; the browser version requires HTTPS for camera
+  access in deployment, while localhost is allowed during development.
 
 ## Run
 
