@@ -250,5 +250,8 @@ python -m unittest discover -s tests -v
 - **[OVERVIEW.md](OVERVIEW.md):** the full project: problem, solution, tech, architecture, interfaces, demo
 - **[STEPS.md](STEPS.md):** exactly what each person does, in order, with checkpoints
 
+## Video Demonstration
+https://youtu.be/2xm-bpWIljM?si=SmOF5bwdHMzhhxtb
+
 ## Credits
 Hand tracking: Google MediaPipe HandLandmarker. Built at HackRPI 2026 by Avyay, Paul and Harry.
