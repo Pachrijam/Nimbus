@@ -39,25 +39,12 @@ button { font: inherit; }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
   color: #edf4fa;
-  font: 600 15px "Space Grotesk", sans-serif;
+  font: 600 30px "Space Grotesk", sans-serif;
   letter-spacing: -.025em;
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid rgba(120, 226, 189, .4);
-  border-radius: 9px;
-  color: var(--mint);
-  font-size: 15px;
-}
-
-.brand-light { color: #93a6b8; font-weight: 400; }
 .topbar-note { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
 .status-dot, .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px rgba(120, 226, 189, .55); }
 
