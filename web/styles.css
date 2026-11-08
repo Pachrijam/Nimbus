@@ -98,6 +98,22 @@ h1 span { color: #8ca2b6; }
 .icon-button.active { color: var(--mint); background: rgba(120, 226, 189, .1); }
 .toolbar-divider { width: 1px; height: 20px; margin: 0 5px; background: var(--line); }
 
+.tool-button.start-game-button {
+  min-height: 48px;
+  padding: 0 24px;
+  border-color: var(--mint);
+  border-radius: 8px;
+  background: var(--mint);
+  color: #081321;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 18px rgba(120, 226, 189, .22);
+}
+.tool-button.start-game-button:hover { border-color: #a0f0d3; background: #a0f0d3; color: #081321; }
+.tool-button.start-game-button.active { border-color: var(--mint); background: #203f3b; color: var(--mint); box-shadow: none; }
+.tool-button.start-game-button.active:hover { background: #2b5149; }
+
 .canvas-wrap { position: relative; overflow: hidden; background: #dceaf0; }
 .exit-free-draw { position: absolute; left: 14px; bottom: 14px; z-index: 2; min-height: 44px; padding: 0 16px; border-color: var(--mint); background: #101e2d; color: var(--mint); }
 .exit-free-draw:hover { background: #203747; }
@@ -152,7 +168,9 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
   .topbar-note { font-size: 0; }
   .intro { align-items: start; padding: 30px 0 20px; }
   .intro-copy { font-size: 12px; }
-  .toolbar { padding: 7px; }
+  .toolbar { padding: 7px; flex-wrap: wrap; }
+  .input-controls { width: 100%; }
+  .start-game-button { width: 100%; }
   .tool-button { padding: 0 7px; font-size: 10px; }
   .tool-button span { margin-right: 2px; }
   .icon-button { width: 30px; }

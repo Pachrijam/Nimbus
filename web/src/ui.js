@@ -67,7 +67,7 @@ export function createUI({ canvas, statusText, toast }) {
     canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two fingers to launch.`);
     if (changed && !freeDraw) {
       if (selectedInput !== "HAND" && snapshot.state !== "LANDED") {
-        setStatus("Enable hand tracking to draw with your camera.");
+        setStatus("Select Start Game to draw with your camera.");
         return;
       }
       const messages = {

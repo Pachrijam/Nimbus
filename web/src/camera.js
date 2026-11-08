@@ -89,7 +89,7 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
       if (request !== cameraRequest) return;
       cameraError = error instanceof Error ? error.message : String(error);
       setInputMode("OFF");
-      setStatus("Hand tracking could not start. Check camera access, then enable hand tracking to try again.");
+      setStatus("Hand tracking could not start. Check camera access, then select Start Game to try again.");
       showToast(`Camera/hand tracking unavailable: ${cameraError}`);
     }
   }
