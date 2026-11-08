@@ -67,7 +67,7 @@ function frame(now) {
         event.cameraAspect = camera.aspectRatio;
       } catch (error) {
         controls.setInputMode("OFF");
-        ui.setStatus("Hand tracking stopped. Select Start Game to try again.");
+        ui.setStatus("Hand tracking stopped. Select Start to try again.");
         ui.showToast(`Hand tracking stopped: ${error.message}`);
       }
     }

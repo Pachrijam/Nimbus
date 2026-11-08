@@ -84,12 +84,12 @@ export function createHandTracking({ cameraVideo, cameraPreview, getInputMode, s
       handTrackingStarting = false;
       cameraError = "";
       setInputMode("HAND");
-      setStatus("Draw a route from the drone with one finger, then hold up two fingers to launch. Tracking gaps pause your route.");
+      setStatus("Draw a route from the drone with one finger, then hold up two or more fingers to launch. Tracking gaps pause your route.");
     } catch (error) {
       if (request !== cameraRequest) return;
       cameraError = error instanceof Error ? error.message : String(error);
       setInputMode("OFF");
-      setStatus("Hand tracking could not start. Check camera access, then select Start Game to try again.");
+      setStatus("Hand tracking could not start. Check camera access, then select Start to try again.");
       showToast(`Camera/hand tracking unavailable: ${cameraError}`);
     }
   }

@@ -28,7 +28,7 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 ## 4. User experience (walkthrough)
 1. The screen shows a **sky** with a **drone** on a launch pad (left), **storm cells** (clouds) in between, a **destination** (right), a **wind arrow** in the HUD, and a small **live camera view** in the top-right corner.
 2. The user raises their **index finger** near the drone and draws a route. The route is **smoothed live**; any too-tight turn shows **red**.
-3. The user raises **two fingers** to release, and the drone **launches**.
+3. The user raises **two or more fingers** to release, and the drone **launches**.
 4. The drone follows the route, **banking smoothly**, **drifting in wind** and **correcting back**. Storm cells may **drift** across the route mid-flight.
 5. **DELIVERED!** shows the score, then the next level. Or **ROUTE FAILED** with a crash effect, then a retry of the same layout.
 6. Press `v` for the **autopilot view**: a red dot shows exactly where the controller is aiming.
@@ -38,7 +38,7 @@ A **game layer** (levels, score, increasing difficulty) makes it fun and turns i
 | Hand | Mode | Effect |
 |---|---|---|
 | ☝ index finger up | `DRAW` | draw route / ink |
-| ✌ index + middle up | `HOVER` | move without drawing; **releases the route** |
+| ✌ two or more fingers up | `HOVER` | move without drawing; **releases the route** |
 | other / no hand | `IDLE` | nothing |
 
 ### Keys

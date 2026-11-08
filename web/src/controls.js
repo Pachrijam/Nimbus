@@ -34,10 +34,10 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
     toggle.title = state.freeDraw ? "Back to game (P)" : "Toggle free draw (P)";
     document.querySelector("#exit-free-draw").classList.toggle("hidden", !state.freeDraw);
     setStatus(state.selectedInput !== "HAND"
-      ? "Select Start Game to draw with your camera."
+      ? "Select Start to draw with your camera."
       : state.freeDraw
         ? "Free draw: sketch with one finger. C clears; Back to game, Esc, or P exits."
-        : "Draw a route from the drone with one finger, then hold up two fingers to launch.");
+        : "Draw a route from the drone with one finger, then hold up two or more fingers to launch.");
   }
 
   document.querySelector("#free-draw").addEventListener("click", () => setFreeDraw(!state.freeDraw));

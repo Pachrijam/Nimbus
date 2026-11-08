@@ -78,9 +78,9 @@ python -m pip install mediapipe
 
 Drawing uses hand gestures only. The desktop app requires MediaPipe, the model,
 and a working webcam; if any is unavailable, it exits with setup instructions.
-In the browser, click **Start Game** and allow camera access. Draw with one
-index finger, then hold up two fingers to launch. If camera access fails, check
-permissions and click **Start Game** again.
+In the browser, click **Start** and allow camera access. Draw with one
+index finger, then hold up two or more fingers to launch. If camera access fails, check
+permissions and click **Start** again.
 
 Keys: `q` quit · `p` Free Draw/Game · `f` fullscreen · `r` retry · `n` next level · `v` autopilot view · `c` clear · `d` debug
 

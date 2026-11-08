@@ -1,17 +1,21 @@
 import math
+from itertools import combinations
 from types import SimpleNamespace
 import unittest
 
 import gestures
 
 
-def hand(*, middle=False, folded=False, angle=0, offset=0):
+def hand(*, middle=False, folded=False, thumb=False, ring=False, pinky=False, angle=0, offset=0):
     points = [(0.5, 0.7)] * 21
     points[0] = (0.5, 0.9)
     points[5], points[6] = (0.45, 0.7), (0.45, 0.55)
     points[8] = (0.45, 0.75 if folded else 0.35)
     points[9], points[10] = (0.55, 0.7), (0.55, 0.55)
     points[12] = (0.55, 0.35 if middle else 0.75)
+    points[2], points[4] = (0.4, 0.75), (0.2, 0.65) if thumb else (0.45, 0.8)
+    points[14], points[16] = (0.6, 0.55), (0.6, 0.35 if ring else 0.75)
+    points[18], points[20] = (0.65, 0.6), (0.65, 0.4 if pinky else 0.8)
     c, s = math.cos(angle), math.sin(angle)
     return [SimpleNamespace(
         x=0.5 + (x - 0.5) * c - (y - 0.5) * s + offset,
@@ -61,6 +65,25 @@ class GestureTests(unittest.TestCase):
         self.assertEqual(self.sample(hand(middle=True), 2)[0], "DRAW")
         self.assertEqual(self.sample(hand())[0], "DRAW")
         self.assertEqual(self.sample(hand(middle=True), 6)[0], "HOVER")
+
+    def test_any_two_or_more_raised_fingers_release_drawing(self):
+        fingers = ("index", "middle", "ring", "pinky", "thumb")
+        for count in range(2, 6):
+            for raised in combinations(fingers, count):
+                for angle in (0, math.pi / 2, math.pi):
+                    with self.subTest(raised=raised, angle=angle):
+                        gestures.reset_gesture(self.tracker)
+                        drawing = self.sample(hand(), 3)
+                        pose = hand(folded="index" not in raised, angle=angle,
+                                    **{finger: finger in raised for finger in fingers[1:]})
+                        self.assertEqual(self.sample(pose, 2), drawing)
+                        self.assertEqual(self.sample(pose, 4)[0], "HOVER")
+
+    def test_single_non_index_finger_does_not_draw_or_release(self):
+        for finger in ("middle", "ring", "pinky", "thumb"):
+            with self.subTest(finger=finger):
+                gestures.reset_gesture(self.tracker)
+                self.assertEqual(self.sample(hand(folded=True, **{finger: True}), 6)[0], "IDLE")
 
     def test_release_timing_is_consistent_across_frame_rates(self):
         for fps in (20, 30, 60):

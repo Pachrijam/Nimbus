@@ -30,7 +30,7 @@
         <div class="toolbar">
           <div class="toolbar-group input-controls" aria-label="Hand tracking">
             <button class="tool-button start-game-button" id="camera-mode" type="button" aria-pressed="false">
-              <span aria-hidden="true">▶</span> Start Game
+              <span aria-hidden="true">▶</span> Start
             </button>
           </div>
           <div class="toolbar-group">
@@ -44,7 +44,7 @@
 
         <div class="canvas-wrap" id="canvas-wrap">
           <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
-          <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two fingers to launch."></canvas>
+          <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two or more fingers to launch."></canvas>
           <div class="camera-preview hidden" id="camera-preview" aria-label="Mirrored webcam preview">
             <video id="camera-video" autoplay playsinline muted></video>
             <span class="camera-label"><span class="live-dot"></span> CAMERA</span>
@@ -77,7 +77,7 @@
         </section>
 
         <div class="panel-footer">
-          <p class="status-text" id="status-text" role="status">Select Start Game to draw with your camera.</p>
+          <p class="status-text" id="status-text" role="status">Select Start to draw with your camera.</p>
           <div class="quick-controls"><kbd>R</kbd><span>Retry</span><kbd>N</kbd><span>Next level</span><kbd>P</kbd><span>Free draw</span></div>
         </div>
       </section>
@@ -85,7 +85,7 @@
       <section class="how-to" aria-label="How to play">
         <article class="step-card">
           <span class="step-number">01</span>
-          <div><h2>Start at the drone</h2><p>Select Start Game and allow camera access. Raise your index finger and draw from the drone.</p></div>
+          <div><h2>Start at the drone</h2><p>Select Start and allow camera access. Raise your index finger and draw from the drone.</p></div>
         </article>
         <article class="step-card">
           <span class="step-number">02</span>
@@ -93,7 +93,7 @@
         </article>
         <article class="step-card">
           <span class="step-number">03</span>
-          <div><h2>Deliver, then challenge Gemini</h2><p>Hold up two fingers to launch. After delivery, compare flight times and routes. Retry the same mission to match or beat Gemini, or choose the next level.</p></div>
+          <div><h2>Deliver, then challenge Gemini</h2><p>Hold up two or more fingers to launch. After delivery, compare flight times and routes. Retry the same mission to match or beat Gemini, or choose the next level.</p></div>
         </article>
       </section>
 

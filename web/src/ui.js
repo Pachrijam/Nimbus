@@ -64,15 +64,15 @@ export function createUI({ canvas, statusText, toast }) {
       showToast("Watch Gemini's purple drone fly its route. Your flight stays orange.", 5000);
     }
     if (selectedInput === "HAND") Object.assign(input, snapshot.cursor);
-    canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two fingers to launch.`);
+    canvas.setAttribute("aria-label", `Mission ${String(snapshot.level).padStart(2, "0")}. Game field. Draw from the drone with one finger; hold up two or more fingers to launch.`);
     if (changed && !freeDraw) {
       if (selectedInput !== "HAND" && snapshot.state !== "LANDED") {
-        setStatus("Select Start Game to draw with your camera.");
+        setStatus("Select Start to draw with your camera.");
         return;
       }
       const messages = {
-        READY: "Draw a route from the drone with one finger, then hold up two fingers to launch.",
-        DRAWING: "Hold up two fingers when you're ready to launch. Tracking gaps pause your route.",
+        READY: "Draw a route from the drone with one finger, then hold up two or more fingers to launch.",
+        DRAWING: "Hold up two or more fingers when you're ready to launch. Tracking gaps pause your route.",
         FLYING: "Drone launched. Avoid the storms!",
         LANDED: snapshot.comparison?.status === "disabled"
           ? "Delivered! R to retry this level, N to continue."
