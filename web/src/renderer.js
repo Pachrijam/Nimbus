@@ -346,10 +346,6 @@ export function createRenderer({ canvas, cameraVideo }) {
       return;
     }
     drawBackground();
-    ctx.fillStyle = "#578b70";
-    ctx.fillRect(game.pad.x - 33, game.pad.y + 14, 66, 9);
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.fillRect(game.pad.x - 40, game.pad.y + 24, 80, 3);
     drawDestination(game.star.x, game.star.y, game.starRadius);
     for (const cloud of replay?.clouds ?? game.clouds) drawCloud(cloud, debug);
 
