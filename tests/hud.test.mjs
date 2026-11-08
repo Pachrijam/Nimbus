@@ -19,10 +19,10 @@ const game = {level:3,score:2322,tries:2,wind:{x:3,y:4}};
 test("mission and wind values render outside the playable canvas", () => {
   const {nodes,html,hud}=fixture();
   hud.update(game,false);
-  assert.equal(nodes.get("#hud-level").textContent,"03");
-  assert.equal(nodes.get("#hud-score").textContent,"2322");
+  assert.equal(nodes.get("#hud-level").textContent,"3");
+  assert.equal(nodes.get("#hud-score").textContent,"2,322");
   assert.equal(nodes.get("#hud-attempts").textContent,"2");
-  assert.equal(nodes.get("#hud-wind").textContent,"5 px/s");
+  assert.equal(nodes.get("#hud-wind").textContent,"Light breeze");
   assert.ok(html.indexOf('id="mission-hud"') < html.indexOf('id="canvas-wrap"'));
   const renderer=readFileSync(new URL("../web/src/renderer.js",import.meta.url),"utf8");
   assert.ok(!renderer.includes("drawHud("));
@@ -36,4 +36,13 @@ test("calm wind hides its arrow and free draw hides the mission panels", () => {
   hud.update(game,false);
   assert.equal(nodes.get("#hud-wind-arrow").style.visibility,"visible");
   assert.ok(!nodes.get("#mission-hud").classList.contains("hidden"));
+});
+
+test("wind uses readable conditions while retaining exact speed in the tooltip", () => {
+  const {nodes,hud}=fixture();
+  for (const [speed,label] of [[0,"Calm"],[5,"Light breeze"],[25,"Steady breeze"],[50,"Strong wind"]]) {
+    hud.update({...game,wind:{x:speed,y:0}},false);
+    assert.equal(nodes.get("#hud-wind").textContent,label);
+    assert.ok(nodes.get("#hud-wind").title.includes(`${speed.toFixed(1)} pixels per second`));
+  }
 });

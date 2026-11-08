@@ -4,17 +4,22 @@ export function createMissionHUD(root = document) {
   const panel = get("mission-hud");
   const level = get("hud-level"), score = get("hud-score"), attempts = get("hud-attempts");
   const wind = get("hud-wind"), arrow = get("hud-wind-arrow");
+  const formatPoints = new Intl.NumberFormat("en-US");
   const write = (element, value) => { if (element.textContent !== value) element.textContent = value; };
   return {
     update(game, freeDraw) {
       panel.classList.toggle("hidden", freeDraw);
-      write(level, String(game.level).padStart(2, "0"));
-      write(score, String(game.score));
+      write(level, String(game.level));
+      write(score, formatPoints.format(game.score));
       write(attempts, String(game.tries));
       const speed = Math.hypot(game.wind.x, game.wind.y);
-      write(wind, `${Math.round(speed)} px/s`);
+      const conditions = speed < 1 ? "Calm"
+        : speed < 20 ? "Light breeze"
+        : speed < 40 ? "Steady breeze" : "Strong wind";
+      write(wind, conditions);
+      wind.title = `Wind speed: ${speed.toFixed(1)} pixels per second. The arrow shows its direction.`;
       arrow.style.transform = `rotate(${Math.atan2(game.wind.y, game.wind.x)}rad)`;
-      arrow.style.visibility = speed < 0.5 ? "hidden" : "visible";
+      arrow.style.visibility = speed < 1 ? "hidden" : "visible";
     },
   };
 }

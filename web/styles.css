@@ -2,7 +2,8 @@
 
 :root {
   color-scheme: dark;
-  font-family: "DM Sans", sans-serif;
+  --ui-font: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--ui-font);
   background: #081321;
   color: #edf4fa;
   font-synthesis: none;
@@ -191,10 +192,10 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 /* Keep compact mission information outside the playable canvas. */
 .mission-hud { display: flex; align-items: center; gap: 18px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: #102332; flex-shrink: 0; }
 .mission-chip { display: flex; align-items: center; gap: 9px; padding-right: 18px; border-right: 1px solid var(--line); }
-.hud-label, .hud-stats dt { color: var(--muted); font: 500 12px "DM Sans", sans-serif; }
-.mission-chip strong { color: #ffc758; font: 600 23px "DM Sans", sans-serif; font-variant-numeric: tabular-nums; }
+.hud-label, .hud-stats dt { color: #a9bac8; font: 500 12px/1.4 var(--ui-font); letter-spacing: .01em; text-transform: none; }
+.mission-chip strong { color: #ffc758; font: 600 22px/1.2 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; }
 .hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 18px; width: min(540px, 100%); margin: 0; }
-.hud-stats dd { margin: 3px 0 0; color: #edf4fa; font: 600 14px "DM Sans", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud-stats dd { margin: 3px 0 0; color: #edf4fa; font: 600 15px/1.4 var(--ui-font); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "zero" 0; letter-spacing: 0; white-space: nowrap; }
 #hud-score { color: #ffe09a; }
 .hud-wind { display: flex; align-items: center; gap: 6px; }
 #hud-wind-arrow { flex-shrink: 0; transform-origin: center; }
@@ -202,5 +203,5 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
   .mission-hud { gap: 12px; padding: 8px 12px; }
   .mission-chip { flex-direction: column; gap: 2px; padding-right: 12px; }
   .hud-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
-  .hud-stats dd { font-size: 12px; }
+  .hud-stats dd { font-size: 13px; }
 }
