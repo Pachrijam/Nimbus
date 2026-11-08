@@ -84,6 +84,10 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fillRect(-1.3, -1.3, 2.6, 2.6);
     ctx.restore();
 
+    ctx.strokeStyle = "rgba(48,74,98,.8)";
+    ctx.lineWidth = 2 / cloud.r;
+    ctx.stroke();
+
     if (debug) {
       ctx.strokeStyle = "rgba(58,91,105,.6)";
       ctx.lineWidth = 1 / cloud.r;
