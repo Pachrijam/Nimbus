@@ -41,6 +41,7 @@ button { font: inherit; }
   align-items: center;
   color: #edf4fa;
   font: italic 700 36px "Space Grotesk", sans-serif;
+  font-synthesis: style;
   letter-spacing: -.025em;
   text-decoration: none;
 }

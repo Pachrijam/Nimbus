@@ -222,14 +222,17 @@ export function createRenderer({ canvas, cameraVideo }) {
     roundedRect(ctx, 158, 17, 260, 76, 8);
     ctx.fillStyle = "rgba(10,31,43,.75)";
     ctx.fill();
+    const scoreRowY = 38;
+    const attemptsRowY = 69;
+    ctx.textBaseline = "middle";
     ctx.font = "600 15px 'DM Sans', sans-serif";
     ctx.fillStyle = "#ffe09a";
-    ctx.fillText(`SCORE ${game.score}`, 174, 44);
+    ctx.fillText(`SCORE ${game.score}`, 174, scoreRowY);
     ctx.fillStyle = "rgba(255,255,255,.72)";
     ctx.font = "12px 'DM Sans', sans-serif";
-    ctx.fillText(`ATTEMPTS ${game.tries}`, 174, 73);
+    ctx.fillText(`ATTEMPTS ${game.tries}`, 174, attemptsRowY);
 
-    const windCenter = { x: 364, y: 43 };
+    const windCenter = { x: 364, y: scoreRowY };
     const length = Math.hypot(game.wind.x, game.wind.y);
     const angle = length > 1 ? Math.atan2(game.wind.y, game.wind.x) : 0;
     const halfLength = Math.min(40, 30 + length * 0.35) / 2;
@@ -250,7 +253,7 @@ export function createRenderer({ canvas, cameraVideo }) {
     ctx.fill();
     ctx.font = "500 14px 'DM Mono', monospace";
     ctx.textAlign = "center";
-    ctx.fillText("WIND", windCenter.x, 82);
+    ctx.fillText("WIND", windCenter.x, attemptsRowY);
     ctx.restore();
   }
 
