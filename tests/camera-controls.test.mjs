@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 async function load(name) {
-  const source = readFileSync(new URL(`../web/src/${name}.js`, import.meta.url));
-  return import("data:text/javascript;base64," + source.toString("base64"));
+  let source = readFileSync(new URL(`../web/src/${name}.js`, import.meta.url), "utf8");
+  if (name === "controls") {
+    const drawing = readFileSync(new URL("../web/src/free-draw.js", import.meta.url));
+    source = source.replace('"./free-draw.js"', JSON.stringify("data:text/javascript;base64," + drawing.toString("base64")));
+  }
+  return import("data:text/javascript;base64," + Buffer.from(source).toString("base64"));
 }
 function target() {
   const handlers = new Map(), classes = new Set();
-  return { handlers, style: {}, addEventListener(type, callback) { handlers.set(type, callback); },
+  return { handlers, children: [], append(child) {this.children.push(child)}, style: {setProperty() {}}, addEventListener(type, callback) { handlers.set(type, callback); },
     classList: {add(c){classes.add(c)},remove(c){classes.delete(c)},toggle(c,on){on?classes.add(c):classes.delete(c)},contains(c){return classes.has(c)}},
     setAttribute() {}, focus() {},
     emit(type, values = {}) { handlers.get(type)?.({button:0,isPrimary:true,pointerId:1,preventDefault(){},stopPropagation(){},...values}); } };
@@ -51,7 +55,7 @@ test("preview supports bounded drag, cancellation, resizing and keyboard movemen
 test("S starts and X or Stop closes camera input without resetting the game", async () => {
   const {createControls} = await load("controls");
   const nodes=new Map();
-  globalThis.document={querySelector(id){if(!nodes.has(id)) nodes.set(id,target());return nodes.get(id)}};
+  globalThis.document={createElement(){return target()},querySelector(id){if(!nodes.has(id)) nodes.set(id,target());return nodes.get(id)}};
   globalThis.window=target();
   const state={input:{mode:"DRAW",point:{x:100,y:100}},selectedInput:"HAND",activeStroke:[],game:{state:"DRAWING"}};
   let starts=0,stops=0,status="";

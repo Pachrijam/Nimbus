@@ -62,11 +62,12 @@ class Session:
 
     def snapshot(self):
         flight = self.game
-        preview = paths.resample(paths.chaikin(flight.raw_path)) if flight.state == "DRAWING" else []
+        preview = paths.flight_path(flight.raw_path) if flight.state == "DRAWING" else []
         return {
             "level": flight.level, "score": flight.score, "tries": flight.tries,
             "state": flight.state, "pad": point(flight.pad), "star": point(flight.star),
-            "wind": point(flight.wind), "clouds": flight.clouds,
+            "wind": point(flight.current_wind()), "windGust": point(flight.wind_gust),
+            "gustPeriod": flight.gust_period, "clouds": flight.clouds,
             "plane": {**flight.plane, "target": point(flight.plane["target"])},
             "path": list(map(point, flight.path)), "trail": list(map(point, flight.trail)),
             "preview": list(map(point, preview)),
@@ -75,6 +76,7 @@ class Session:
             "startRadius": game.START_RADIUS,
             "comparison": flight.comparison(),
             "fieldWidth": flight.w,
+            "fieldHeight": flight.h,
             "launchClouds": [dict(c) for c in flight.cloud_layout] if flight.state == "LANDED" else [],
             "trajectory": list(map(point, flight.trajectory)) if flight.state == "LANDED" else [],
             "cursor": {"mode": self.cursor[0], "point": point(self.cursor[1])},

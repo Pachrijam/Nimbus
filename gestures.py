@@ -59,12 +59,10 @@ EXIT_DRAW_TIME = 0.18
 
 # 5. Lost-hand grace (seconds)
 LOST_GRACE_TIME = 0.25
-
-# 6. Adaptive smoothing
-MIN_ALPHA = 0.25          # used when the finger is still (smooth)
-MAX_ALPHA = 0.85          # used when the finger moves fast (responsive)
-FAST_SPEED = 40.0         # px per frame that counts as "fast"
-
+# 6. Adaptive, time-aware smoothing (One Euro filter)
+SMOOTH_MIN_CUTOFF = 1.2
+SMOOTH_BETA = 0.03
+SMOOTH_DERIVATIVE_CUTOFF = 1.0
 # Values that must survive between frames
 _default_state = {}
 
@@ -78,6 +76,8 @@ def reset_gesture(tracker=None):
         "candidate": "IDLE",     # raw mode currently being counted
         "candidate_time": 0.0,
         "smooth": None,          # smoothed (x, y) floats, or None
+        "smooth_raw": None,      # previous unfiltered point
+        "smooth_velocity": (0.0, 0.0),
         "draw_point": None,      # last confirmed DRAW point for the release hold
         "lost": 0.0,
         "index_up": False,
@@ -115,6 +115,39 @@ def finger_ratio(landmarks, tip, pip, w, h):
     if d_pip < 1e-9:
         return 0.0
     return pixel_dist(landmarks[tip], wrist, w, h) / d_pip
+
+
+def _filter_alpha(dt, cutoff):
+    tau = 1 / (2 * math.pi * cutoff)
+    return 1 / (1 + tau / dt)
+
+
+def _smooth_position(state, x, y, dt):
+    if state["smooth"] is None:
+        state["smooth"] = (x, y)
+        state["smooth_raw"] = (x, y)
+        state["smooth_velocity"] = (0.0, 0.0)
+        return state["smooth"]
+
+    dt = max(dt, 1e-3)
+    previous_x, previous_y = state["smooth"]
+    raw_x, raw_y = state["smooth_raw"]
+    velocity_x, velocity_y = state["smooth_velocity"]
+    derivative_alpha = _filter_alpha(dt, SMOOTH_DERIVATIVE_CUTOFF)
+    raw_velocity_x = (x - raw_x) / dt
+    raw_velocity_y = (y - raw_y) / dt
+    velocity_x += derivative_alpha * (raw_velocity_x - velocity_x)
+    velocity_y += derivative_alpha * (raw_velocity_y - velocity_y)
+
+    cutoff = SMOOTH_MIN_CUTOFF + SMOOTH_BETA * math.hypot(velocity_x, velocity_y)
+    position_alpha = _filter_alpha(dt, cutoff)
+    state["smooth"] = (
+        previous_x + position_alpha * (x - previous_x),
+        previous_y + position_alpha * (y - previous_y),
+    )
+    state["smooth_raw"] = (x, y)
+    state["smooth_velocity"] = (velocity_x, velocity_y)
+    return state["smooth"]
 
 
 def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None):
@@ -163,6 +196,7 @@ def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None)
         raw_mode = "DRAW"
     else:
         raw_mode = "IDLE"
+    previous_mode = state["mode"]
 
     # ---- 3. Debouncing (sticky DRAW) ----
     if raw_mode == state["candidate"]:
@@ -180,16 +214,12 @@ def get_gesture(landmarks, w, h, tracker=None, dt=1 / 30, *, camera_aspect=None)
         state["mode"] = state["candidate"]
 
     # ---- 6. Adaptive smoothing ----
-    if state["smooth"] is None:
+    if previous_mode != "DRAW" and state["mode"] == "DRAW":
         state["smooth"] = (x, y)
+        state["smooth_raw"] = (x, y)
+        state["smooth_velocity"] = (0.0, 0.0)
     else:
-        old_x, old_y = state["smooth"]
-        speed = math.hypot(x - old_x, y - old_y)
-        alpha = MIN_ALPHA + (MAX_ALPHA - MIN_ALPHA) * min(1.0, speed / FAST_SPEED)
-        new_x = alpha * x + (1 - alpha) * old_x
-        new_y = alpha * y + (1 - alpha) * old_y
-        state["smooth"] = (new_x, new_y)
-
+        _smooth_position(state, x, y, dt)
     sx, sy = state["smooth"]
     point = (int(sx), int(sy))
 

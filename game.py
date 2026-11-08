@@ -5,6 +5,7 @@ Owner: Person 3 (calls physics.py from Avyay and visuals.py from Paul)
 States:  READY -> DRAWING -> FLYING -> LANDED  -> next level
                                    -> CRASHED -> retry
 """
+import math
 import random
  
 import flight_sim
@@ -19,7 +20,7 @@ HAND_FINISH_RADIUS = 60  # px: snap a nearby hand-drawn endpoint to the star
 MIN_PATH_POINTS = 10     # ignore accidental tiny paths
 MESSAGE_TIME = 2.0       # seconds to show LANDED / CRASHED before moving on
 PAD_MARGIN = 120         # px from the left edge
-MAX_CLOUDS = 6
+MAX_CLOUDS = 8
 CLOUD_RADIUS = 45
 DRAWING_PAUSE_TIME = 0.3  # seconds allowed for a brief tracking dropout
 SCREEN_MARGIN = flight_sim.SCREEN_MARGIN
@@ -27,6 +28,19 @@ MIN_POINT_DISTANCE = 3
 MAX_TRAIL_POINTS = 60
 MIN_WIDTH = 640
 MIN_HEIGHT = 480
+
+
+def _level_conditions(level):
+    """Return bounded difficulty settings that keep increasing across levels."""
+    return {
+        "cloud_count": 1 if level == 1 else min(level + 1, MAX_CLOUDS),
+        "cloud_radius": CLOUD_RADIUS + min(max(level - 3, 0) * 2, 10),
+        "cloud_speed": 0 if level <= 2 else min(8 + (level - 3) * 6, 55),
+        "direction_spread": min(max(level - 2, 0) * math.pi / 8, math.pi),
+        "wind_strength": 0 if level == 1 else min(level * 6, 60),
+        "gust_strength": 0 if level <= 2 else min(2 + (level - 3) * 3, 24),
+        "gust_period": max(2.0, 4.5 - max(level - 3, 0) * 0.25),
+    }
  
  
 class Game:
@@ -55,27 +69,14 @@ class Game:
             self.star = (self.w - 120, self.h // 2)
         else:
             self.star = (self.w - 120, random.randint(120, self.h - 120))
-        # Increase difficulty with each level.
-        if self.level == 1:
-            num_clouds = 1
-            wind_strength = 0
-            cloud_speed = 0
-        elif self.level == 2:
-            num_clouds = 3
-            wind_strength = 15
-            cloud_speed = 0
-        elif self.level == 3:
-            num_clouds = 4
-            wind_strength = 15
-            cloud_speed = 10
-        elif self.level == 4:
-            num_clouds = 5
-            wind_strength = 25
-            cloud_speed = 20
-        else:
-            num_clouds = min(self.level + 1, MAX_CLOUDS)
-            wind_strength = 30 + (self.level - 5) * 5
-            cloud_speed = 25 + (self.level - 5) * 5
+        conditions = _level_conditions(self.level)
+        num_clouds = conditions["cloud_count"]
+        radius = conditions["cloud_radius"]
+        cloud_speed = conditions["cloud_speed"]
+        direction_spread = conditions["direction_spread"]
+        wind_strength = conditions["wind_strength"]
+        gust_strength = conditions["gust_strength"]
+        self.gust_period = conditions["gust_period"]
  
         self.cloud_layout = []
         if self.level == 1:
@@ -83,15 +84,16 @@ class Game:
             self.cloud_layout.append({
                 "x": self.w // 2,
                 "y": self.h // 2,
-                "r": CLOUD_RADIUS,
-                "vx": 0.0
+                "r": radius,
+                "vx": 0.0,
+                "vy": 0.0,
             })
  
         # Later levels use random positions.
         for i in range(num_clouds - len(self.cloud_layout)):
-            for attempt in range(100):
-                r = CLOUD_RADIUS
-                x = random.randint(180, self.w - 180)
+            for attempt in range(1000):
+                r = radius
+                x = random.randint(r, self.w - r)
                 y = random.randint(r, self.h - r)
  
                 position = (x, y)
@@ -108,17 +110,19 @@ class Game:
                 for cloud in self.cloud_layout:
                     other = (cloud["x"], cloud["y"])
  
-                    if paths.distance(position, other) < r + cloud["r"] + 10:
+                    if paths.distance(position, other) < r + cloud["r"]:
                         valid = False
  
                 if valid:
-                    vx = random.choice([-cloud_speed, cloud_speed])
- 
+                    base_direction = random.choice((0.0, math.pi))
+                    direction = base_direction + random.uniform(-direction_spread, direction_spread)
+
                     self.cloud_layout.append({
                         "x": x,
                         "y": y,
                         "r": r,
-                        "vx": vx
+                        "vx": cloud_speed * math.cos(direction),
+                        "vy": cloud_speed * math.sin(direction),
                     })
                     break
  
@@ -126,6 +130,10 @@ class Game:
         self.wind = (
             random.uniform(-wind_strength, wind_strength),
             random.uniform(-wind_strength, wind_strength)
+        )
+        self.wind_gust = (
+            random.uniform(-gust_strength, gust_strength),
+            random.uniform(-gust_strength, gust_strength),
         )
  
         self.tries = 0
@@ -205,8 +213,7 @@ class Game:
         if len(self.raw_path) < MIN_PATH_POINTS:
             self.retry()
             return
-        smooth = paths.chaikin(self.raw_path)
-        self.path = paths.resample(smooth)
+        self.path = paths.flight_path(self.raw_path)
         self.tries += 1
         self.state = "FLYING"
  
@@ -215,7 +222,10 @@ class Game:
         while self.flight_accumulator + 1e-12 >= flight_sim.STEP and self.state == "FLYING":
             self.flight_accumulator -= flight_sim.STEP
             self.state = flight_sim.advance(self.plane, self.path, self.wind, self.clouds,
-                                            self.star, self.w, self.h)
+                                            self.star, self.w, self.h,
+                                            elapsed=self.flight_ticks * flight_sim.STEP,
+                                            gust=self.wind_gust,
+                                            gust_period=self.gust_period)
             self.flight_ticks += 1
             position = (self.plane["x"], self.plane["y"])
             self.flight_distance += paths.distance(self.trajectory[-1], position)
@@ -231,7 +241,16 @@ class Game:
     def level_layout(self):
         """Detached launch conditions; camera and player input never go to Gemini."""
         return {"width": self.w, "height": self.h, "pad": self.pad, "star": self.star,
-                "wind": self.wind, "clouds": [dict(c) for c in self.cloud_layout]}
+                "wind": self.wind, "wind_gust": self.wind_gust,
+                "gust_period": self.gust_period,
+                "clouds": [dict(c) for c in self.cloud_layout]}
+
+    def current_wind(self):
+        if self.state != "FLYING":
+            return self.wind
+        return flight_sim.wind_at(
+            self.wind, self.wind_gust, self.flight_ticks * flight_sim.STEP, self.gust_period
+        )
 
     def complete_delivery(self):
         elapsed = self.flight_ticks * flight_sim.STEP
@@ -282,7 +301,7 @@ class Game:
             visuals.draw_cloud(img, cloud["x"], cloud["y"], cloud["r"])
  
         if self.state == "DRAWING":
-            preview = paths.resample(paths.chaikin(self.raw_path))
+            preview = paths.flight_path(self.raw_path)
             min_radius = physics.SPEED / physics.MAX_TURN
             tight = paths.find_tight_turns(preview, min_radius)
             visuals.draw_route(img, preview, tight)
@@ -301,7 +320,7 @@ class Game:
         if self.show_autopilot:
             visuals.draw_autopilot(img, (self.plane["x"], self.plane["y"]), self.plane["target"])
  
-        visuals.draw_hud(img, self.level, self.score, self.tries, self.wind)
+        visuals.draw_hud(img, self.level, self.score, self.tries, self.current_wind())
         visuals.draw_camera_inset(img, frame)
  
         if self.state == "READY":

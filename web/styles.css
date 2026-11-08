@@ -106,6 +106,13 @@ h1 span { color: #8ca2b6; }
 .tool-button.start-game-button.active:hover { background: #2b5149; }
 
 .canvas-wrap { position: relative; overflow: hidden; background: #dceaf0; }
+.free-draw-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); color: #aab9c7; font-size: 12px; }
+.pen-colors { display: flex; gap: 6px; }
+.pen-color { width: 30px; height: 30px; border: 3px solid var(--panel); border-radius: 50%; background: var(--pen-color); cursor: pointer; }
+.pen-color[aria-pressed="true"] { outline: 2px solid white; outline-offset: 1px; }
+#pen-size { padding: 6px; border: 1px solid var(--line); border-radius: 6px; color: #edf4fa; background: var(--panel); font: inherit; }
+.drawing-hint { flex-basis: 100%; color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
 .exit-free-draw { position: absolute; left: 14px; bottom: 14px; z-index: 2; min-height: 44px; padding: 0 16px; border-color: var(--mint); background: #101e2d; color: var(--mint); }
 .exit-free-draw:hover { background: #203747; }
 #game-canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; cursor: crosshair; touch-action: none; }

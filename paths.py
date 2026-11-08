@@ -2,7 +2,7 @@
 Path helpers: turn a messy hand-drawn path into a clean flight plan.
 Owner: Person 3
 
-Order used by the game:  raw points -> chaikin() -> resample() -> flight path
+Order used by the game: raw points -> smooth_stroke() -> chaikin() -> resample()
 """
 import math
 
@@ -106,3 +106,35 @@ def resample(points, spacing=8.0):
     else:
         result[-1] = points[-1]
     return result
+
+
+def smooth_stroke(points, spacing=4.0, passes=2):
+    """Reduce hand-tracking jitter with a distance-uniform, endpoint-preserving filter."""
+    if spacing <= 0:
+        raise ValueError("spacing must be positive")
+    if passes < 0:
+        raise ValueError("passes must not be negative")
+
+    result = resample(points, spacing)
+    if len(result) < 3:
+        return result
+
+    weights = (1, 4, 6, 4, 1)
+    for _ in range(passes):
+        smoothed = [result[0]]
+        for i in range(1, len(result) - 1):
+            x = y = total = 0.0
+            for offset, weight in zip(range(-2, 3), weights):
+                index = max(0, min(len(result) - 1, i + offset))
+                x += result[index][0] * weight
+                y += result[index][1] * weight
+                total += weight
+            smoothed.append((x / total, y / total))
+        smoothed.append(result[-1])
+        result = smoothed
+    return result
+
+
+def flight_path(points, spacing=8.0):
+    """Build the same smooth, endpoint-preserving route for preview and flight."""
+    return resample(chaikin(smooth_stroke(points)), spacing)

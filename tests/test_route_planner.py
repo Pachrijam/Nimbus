@@ -74,6 +74,8 @@ class PredictivePlanningTests(unittest.TestCase):
         self.assertEqual(best["waypoints"][0], scene["pad"])
         self.assertEqual(best["waypoints"][-1], scene["star"])
         flight = game.Game(960, 600, headless=True)
+        flight.pad = scene["pad"]
+        flight.star = scene["star"]
         flight.wind = scene["wind"]
         flight.cloud_layout = copy.deepcopy(scene["clouds"])
         flight.retry()

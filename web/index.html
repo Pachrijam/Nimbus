@@ -44,6 +44,18 @@
           </div>
         </div>
 
+        <div class="free-draw-tools hidden" id="free-draw-tools" aria-label="Drawing tools">
+          <span>Pen</span>
+          <div id="pen-colors" class="pen-colors" role="group" aria-label="Pen color"></div>
+          <label for="pen-size">Size</label>
+          <select id="pen-size">
+            <option value="4">Fine</option>
+            <option value="8" selected>Medium</option>
+            <option value="16">Bold</option>
+          </select>
+          <button class="tool-button" id="undo-drawing" type="button" title="Undo stroke (U)" disabled>Undo</button>
+          <span class="drawing-hint">One finger draws · Two fingers change color</span>
+        </div>
         <div class="canvas-wrap" id="canvas-wrap">
           <button class="tool-button exit-free-draw hidden" id="exit-free-draw" type="button" title="Back to game (Esc or P)">Back to game</button>
           <canvas id="game-canvas" width="960" height="600" aria-label="Game field. Draw from the drone with one finger; hold up two or more fingers to launch."></canvas>

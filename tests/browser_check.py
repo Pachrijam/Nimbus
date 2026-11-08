@@ -23,7 +23,7 @@ def main():
     with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
         session = Session()
         route = {"waypoints": [{"x": x, "y": y} for x, y in
-                              [(90, 300), (240, 180), (480, 180), (680, 200), (840, 300)]]}
+                              [session.game.pad, (240, 180), (480, 180), (680, 200), session.game.star]]}
         session.game.path = gemini_agent.validate_route(route, session.game.level_layout())
         session.game.state = "FLYING"
         session.game.tries = 1
@@ -45,7 +45,7 @@ def main():
       const state = {game:null, input:{mode:'IDLE',point:null}, selectedInput:'HAND', freeDraw:false, freeInk:[], debug:false, autopilot:false};
       const ui = createUI({canvas, statusText:document.querySelector('#status-text'), toast:document.querySelector('#toast')});
       const events = [], check = (ok,msg) => {if (!ok) throw Error(msg)};
-      createControls({gamePanel:document.querySelector('.game-panel'), handButton:document.querySelector('#camera-mode'), state,
+      const controls = createControls({gamePanel:document.querySelector('.game-panel'), handButton:document.querySelector('#camera-mode'), state,
         camera:{stopCamera(){},enableHandTracking(){}}, queueEvent:e=>events.push(e), setStatus:ui.setStatus, showToast:ui.showToast});
       const pending = structuredClone(snapshot);
       pending.comparison.status = 'pending'; pending.comparison.message = 'Planning...';
@@ -105,6 +105,63 @@ def main():
       for (let time = 0; time <= 2000; time += 100) renderer.render(state,false,time);
       check(labels.includes('GEMINI') && labels.some(text => text.startsWith('Watch Gemini fly:')), 'animated drone and timer visible');
       context.fillText = fillText;
+      const toggle = document.querySelector('#free-draw');
+      toggle.click();
+      check(state.freeDraw && panel.classList.contains('hidden'), 'enter free draw immediately hides results');
+      check(!document.querySelector('#free-draw-tools').classList.contains('hidden'), 'drawing tools visible');
+      check(canvas.getAttribute('aria-label').includes('Free draw'), 'free draw accessible label');
+      const eventCount = events.length;
+      for (const key of ['r','n','v']) window.dispatchEvent(new KeyboardEvent('keydown',{key}));
+      check(events.length === eventCount && !state.autopilot, 'game shortcuts cannot change paused mission');
+      const sample = (mode, x = 300, y = 300) => {
+        state.input = Object.assign(state.input, {mode, point:x === null ? null : {x,y}});
+        controls.updateFreeDraw();
+      };
+      renderer.render(state,false,20500);
+      const pixel = (x,y) => [...context.getImageData(
+        Math.floor(x * canvas.width / 960), Math.floor(y * canvas.height / 600), 1, 1).data];
+      const blankDot = pixel(300,300), blankGap = pixel(350,300);
+      sample('DRAW');
+      for (let i = 0; i < 100; i++) sample('DRAW');
+      check(state.freeInk.length === 1 && state.freeInk[0].points.length === 1, 'stationary input creates one dot');
+      const firstColor = state.penColor;
+      sample('HOVER'); const secondColor = state.penColor;
+      sample('HOVER');
+      check(firstColor !== secondColor && state.penColor === secondColor, 'held peace sign changes color once');
+      document.querySelector('#pen-colors').children[1].click(); sample('HOVER');
+      check(state.penColor === secondColor, 'palette selection survives a held peace sign');
+      sample('DRAW', 400, 300); sample('DRAW', 500, 300);
+      check(state.freeInk.length === 2 && state.freeInk[0].color === firstColor && state.freeInk[1].color === secondColor, 'stroke colors retained');
+      sample('IDLE', null); sample('DRAW', 600, 300);
+      check(state.freeInk.length === 3, 'tracking loss separates strokes');
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:'u'}));
+      check(state.freeInk.length === 2, 'undo removes last stroke');
+      const size = document.querySelector('#pen-size'); size.value = '16'; size.dispatchEvent(new Event('change'));
+      document.querySelector('#pen-colors').children[3].click();
+      sample('DRAW', 300, 400); sample('DRAW', 600, 400); sample('IDLE', null);
+      check(state.freeInk[2].size === 16 && state.freeInk[0].size === 8, 'brush size applies to new strokes');
+      renderer.render(state,false,21000);
+      check(canvas.width === Math.round(canvas.getBoundingClientRect().width * Math.min(2, devicePixelRatio)), 'canvas preserves high-DPI rendering');
+      check(pixel(300,300)[0] === 255 && pixel(300,300)[1] === 109, 'single point stroke is visible');
+      check(JSON.stringify(pixel(350,300)) === JSON.stringify(blankGap), 'pen lift does not connect separate strokes');
+      check(pixel(450,400)[0] === 255 && pixel(450,400)[1] === 218, 'selected pen color rendered');
+      const ink = state.freeInk;
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));
+      check(!state.freeDraw && !panel.classList.contains('hidden'), 'escape restores game and results');
+      check(document.querySelector('#status-text').textContent.includes('Delivery complete'), 'exit restores mission status');
+      document.querySelector('#clear').click();
+      check(state.freeInk === ink && state.freeInk.length === 3, 'clearing game preserves free drawing');
+      toggle.click(); sample('DRAW', 700, 400);
+      check(state.freeInk.length === 4, 'returning to free draw starts a separate stroke');
+      ui.applySnapshot(state,{...snapshot,cursor:{mode:'DRAW',point:{x:100,y:100}}},false);
+      check(state.input.point.x === 700, 'stale snapshots cannot change the pen');
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:'c'}));
+      check(!state.freeInk.length && !state.activeStroke && document.querySelector('#undo-drawing').disabled, 'clear removes ink and resets stroke');
+      renderer.render(state,false,22000);
+      check(JSON.stringify(pixel(300,300)) === JSON.stringify(blankDot), 'cleared ink does not leave ghosts');
+      sample('DRAW', 280, 260); sample('DRAW', 360, 340); sample('DRAW', 470, 220); sample('HOVER');
+      sample('DRAW', 520, 220); sample('DRAW', 620, 340); sample('DRAW', 700, 260); sample('IDLE', null);
+      renderer.render(state,false,23000);
       document.querySelector('#toast').classList.add('hidden');
       window.scrollTo(0,0);
       check(document.documentElement.scrollWidth <= innerWidth,'overflow');
@@ -135,13 +192,14 @@ def main():
     try:
         # Headless Edge clamps very narrow layout viewports; 640 tests the
         # mobile breakpoint without producing a cropped screenshot.
-        for width in (1280, 640):
+        for width, density in ((1280, 1), (640, 1), (1280, 2), (640, 2)):
             profile = tempfile.mkdtemp(prefix="nimbus-browser-")
-            screenshot = str(Path(tempfile.gettempdir()) / f"nimbus-gemini-{width}.png")
+            screenshot = str(Path(tempfile.gettempdir()) / f"nimbus-gemini-{width}-{density}x.png")
             result = subprocess.run([
                 r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
                 "--headless", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
                 "--disable-extensions", "--disable-background-networking",
+                f"--force-device-scale-factor={density}",
                 "--user-data-dir=" + profile, f"--window-size={width},1600",
                 "--virtual-time-budget=3000", "--screenshot=" + screenshot, "--dump-dom",
                 f"http://127.0.0.1:{server.server_port}/__qa__"],
@@ -149,7 +207,7 @@ def main():
                 startupinfo=startup, creationflags=subprocess.CREATE_NO_WINDOW)
             marker = re.search(r'data-qa="([^"]+)"', result.stdout.decode("utf-8", errors="replace"))
             status = marker.group(1) if marker else "no result"
-            print(f"{width}px browser checks: {status}; screenshot: {screenshot}")
+            print(f"{width}px at {density}x browser checks: {status}; screenshot: {screenshot}")
             if result.returncode or status != "passed":
                 raise RuntimeError("Browser checks failed: " + status)
     finally:

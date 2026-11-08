@@ -95,10 +95,23 @@ class GestureTests(unittest.TestCase):
 
     def test_cursor_follows_movement_without_long_smoothing_delay(self):
         _, start = self.sample(hand(), 3)
-        # A 0.06 camera displacement spans 60 pixels through the active zone.
+        # Measure filter responsiveness relative to the configured cursor sensitivity.
+        displacement = 0.06 * 600 / (gestures.ZONE_RIGHT - gestures.ZONE_LEFT)
         _, moved = self.sample(hand(offset=0.06))
-        self.assertGreaterEqual(moved[0] - start[0], 40)
-        self.assertLessEqual(moved[0] - start[0], 60)
+        self.assertGreaterEqual(moved[0] - start[0], displacement * 0.6)
+        self.assertLessEqual(moved[0] - start[0], displacement + 1)
+
+    def test_smoothing_reduces_small_hand_jitter(self):
+        self.sample(hand(), 3)
+        offsets = (0, 0.002, -0.002, 0.001, -0.001, 0, 0.002, -0.002)
+        raw_x = [gestures.to_screen(0.45 + offset, gestures.ZONE_LEFT,
+                                    gestures.ZONE_RIGHT, 600) for offset in offsets]
+        filtered_x = [
+            self.sample(hand(offset=offset))[1][0]
+            for offset in offsets[1:]
+        ]
+
+        self.assertLess(max(filtered_x) - min(filtered_x), max(raw_x) - min(raw_x))
 
     def test_explicit_reset_clears_tracking_immediately(self):
         self.sample(hand(), 3)
