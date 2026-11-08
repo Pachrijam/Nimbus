@@ -124,6 +124,7 @@ crashes, Gemini tries to find a safe route through the same level; after a
 successful delivery, it benchmarks your flight against its own proposals.
 Gemini proposes routes for the same level, and Python flies each proposal
 through the same fixed-step physics, wind, and moving clouds as the player.
+Wind stays constant throughout each flight.
 The fastest verified route becomes the benchmark. Both actual flight paths
 appear on the field; after a crash, the result calls out Gemini's safe route
 instead of claiming a time win. After a delivery, the results lead with who

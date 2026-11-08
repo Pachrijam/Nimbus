@@ -66,8 +66,7 @@ class Session:
         return {
             "level": flight.level, "score": flight.score, "tries": flight.tries,
             "state": flight.state, "pad": point(flight.pad), "star": point(flight.star),
-            "wind": point(flight.current_wind()), "windGust": point(flight.wind_gust),
-            "gustPeriod": flight.gust_period, "clouds": flight.clouds,
+            "wind": point(flight.current_wind()), "clouds": flight.clouds,
             "plane": {**flight.plane, "target": point(flight.plane["target"])},
             "path": list(map(point, flight.path)), "trail": list(map(point, flight.trail)),
             "preview": list(map(point, preview)),

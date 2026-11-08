@@ -10,12 +10,11 @@ class DifficultyTests(unittest.TestCase):
 
         self.assertEqual([level["cloud_count"] for level in levels[:7]],
                          [1, 3, 4, 5, 6, 7, 8])
-        for key in ("wind_strength", "gust_strength", "cloud_speed",
+        for key in ("wind_strength", "cloud_speed",
                     "cloud_radius", "direction_spread"):
             values = [level[key] for level in levels]
             self.assertTrue(all(left <= right for left, right in zip(values, values[1:])), key)
             self.assertTrue(any(left < right for left, right in zip(values[:7], values[1:8])), key)
-        self.assertGreater(levels[2]["gust_strength"], 0)
         self.assertGreater(levels[2]["direction_spread"], 0)
 
     def test_each_level_places_all_clouds_at_supported_sizes(self):
@@ -41,20 +40,16 @@ class DifficultyTests(unittest.TestCase):
         flight.start_level()
         layout = [dict(cloud) for cloud in flight.cloud_layout]
         wind = flight.wind
-        gust = flight.wind_gust
 
         flight.retry()
 
         self.assertEqual(flight.cloud_layout, layout)
         self.assertEqual(flight.clouds, layout)
         self.assertEqual(flight.wind, wind)
-        self.assertEqual(flight.wind_gust, gust)
 
-    def test_wind_indicator_tracks_gusts_during_flight(self):
+    def test_wind_stays_constant_during_flight(self):
         flight = game.Game(960, 600, headless=True)
-        flight.wind = (0, 0)
-        flight.wind_gust = (0, 10)
-        flight.gust_period = 4
+        flight.wind = (12, -4)
         flight.state = "FLYING"
 
         flight.flight_ticks = 0
@@ -62,8 +57,8 @@ class DifficultyTests(unittest.TestCase):
         flight.flight_ticks = 30
         changed_wind = flight.current_wind()
 
-        self.assertEqual(initial_wind, (0, 10))
-        self.assertNotEqual(changed_wind, initial_wind)
+        self.assertEqual(initial_wind, (12, -4))
+        self.assertEqual(changed_wind, initial_wind)
         flight.state = "LANDED"
         self.assertEqual(flight.current_wind(), flight.wind)
 

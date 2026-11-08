@@ -199,8 +199,6 @@ class GeminiTests(unittest.TestCase):
 
     def test_player_and_agent_use_identical_steps_with_wind_and_moving_clouds(self):
         self.flight.wind = (12, -4)
-        self.flight.wind_gust = (6, -8)
-        self.flight.gust_period = 3.0
         self.flight.cloud_layout[0]["vx"] = 20
         self.flight.cloud_layout[0]["vy"] = 11
         self.flight.retry()

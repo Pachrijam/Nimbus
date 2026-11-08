@@ -122,7 +122,7 @@ Tune difficulty with Harry, test gestures in bad lighting, fix bugs.
 | 8 | Crash effect | Spin + puff at the crash point for ~1 s (add a function; ask Harry to call it) |
 | 9 | Delivered effect | Flash/ring at the destination |
 | 10 | Wind streaks | Faint lines drifting in the wind direction |
-| 11 | Title screen text + level banner | "Level 3: Gusty" style |
+| 11 | Title screen text + level banner | "Level 3: Windy" style |
 
 ---
 
@@ -202,7 +202,7 @@ Tune difficulty with Harry, test gestures in bad lighting, fix bugs.
    ```
    git checkout -b extras
    ```
-2. Work on extras ONLY (gusts, wind streaks, tutorial level, leaderboard). Commit on the branch.
+2. Work on extras ONLY (wind streaks, tutorial level, leaderboard). Commit on the branch.
 3. **8:00 decision:**
    - Works → `git checkout main`, `git merge extras`, `git push`
    - Doesn't → `git checkout main` (the branch is abandoned; main is untouched)

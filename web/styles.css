@@ -194,10 +194,9 @@ button:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 .mission-chip { display: flex; align-items: center; gap: 9px; padding-right: 18px; border-right: 1px solid var(--line); }
 .hud-label, .hud-stats dt { color: var(--muted); font: 500 10px "DM Mono", monospace; text-transform: uppercase; }
 .mission-chip strong { color: #ffc758; font: 700 23px "Space Grotesk", sans-serif; font-variant-numeric: tabular-nums; }
-.hud-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; gap: 18px; width: min(540px, 100%); margin: 0; }
+.hud-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 18px; width: min(540px, 100%); margin: 0; }
 .hud-stats dd { margin: 3px 0 0; color: #edf4fa; font: 500 13px "DM Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #hud-score { color: #ffe09a; }
-#hud-gust { color: #78cbd8; }
 .hud-wind { display: flex; align-items: center; gap: 6px; }
 #hud-wind-arrow { flex-shrink: 0; transform-origin: center; }
 @media (max-width: 700px) {

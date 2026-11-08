@@ -169,7 +169,7 @@ webcam ─> main.py ─> MediaPipe ─> gestures.get_gesture() ─> (mode, point
 | **Core** | Gestures + game loop with hand input + collisions + free draw | ~90% |
 | **Expected** | + Chaikin/resampling, levels, drift, score, real visuals, red infeasible turns | ~80% |
 | **Best case (target)** | + pure pursuit physics with wind, autopilot view, polished effects | ~70% |
-| **Sunday extras** (branch) | wind gusts, wind streaks, tutorial level, leaderboard | partial |
+| **Sunday extras** (branch) | wind streaks, tutorial level, leaderboard | partial |
 | **Cut** | toolbar/colors/brush sizes, palm eraser, shape snapping, undo, two-player | — |
 
 ---

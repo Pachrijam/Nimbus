@@ -33,10 +33,12 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
   document.querySelector("#challenge-retry").addEventListener("click", retry);
   document.querySelector("#challenge-next").addEventListener("click", nextLevel);
   document.querySelector("#gemini-replay").addEventListener("click", () => {
-    if (state.game?.state !== "LANDED" || state.game.comparison?.status !== "ready") return;
+    if (state.freeDraw || !["LANDED", "CRASHED"].includes(state.game?.state)
+        || state.game.comparison?.status !== "ready") return;
     state.geminiReplay = (state.geminiReplay ?? 0) + 1;
     document.querySelector("#game-canvas").scrollIntoView({ block: "nearest", behavior: "smooth" });
-    setStatus("Replaying Gemini's flight in purple. Your flight stays orange.");
+    const flight = state.game.comparison.planner === "local" ? "the verified flight" : "Gemini's flight";
+    setStatus(`Replaying ${flight} in purple. Your flight stays orange.`);
   });
 
   function setInputMode(mode) {

@@ -36,8 +36,6 @@ def _level_conditions(level):
         "cloud_speed": 0 if level <= 2 else min(8 + (level - 3) * 6, 55),
         "direction_spread": min(max(level - 2, 0) * math.pi / 8, math.pi),
         "wind_strength": 0 if level == 1 else min(level * 6, 60),
-        "gust_strength": 0 if level <= 2 else min(2 + (level - 3) * 3, 24),
-        "gust_period": max(2.0, 4.5 - max(level - 3, 0) * 0.25),
     }
  
  
@@ -73,8 +71,6 @@ class Game:
         cloud_speed = conditions["cloud_speed"]
         direction_spread = conditions["direction_spread"]
         wind_strength = conditions["wind_strength"]
-        gust_strength = conditions["gust_strength"]
-        self.gust_period = conditions["gust_period"]
  
         self.cloud_layout = []
         if self.level == 1:
@@ -128,10 +124,6 @@ class Game:
         self.wind = (
             random.uniform(-wind_strength, wind_strength),
             random.uniform(-wind_strength, wind_strength)
-        )
-        self.wind_gust = (
-            random.uniform(-gust_strength, gust_strength),
-            random.uniform(-gust_strength, gust_strength),
         )
  
         self.tries = 0
@@ -217,10 +209,7 @@ class Game:
         while self.flight_accumulator + 1e-12 >= flight_sim.STEP and self.state == "FLYING":
             self.flight_accumulator -= flight_sim.STEP
             self.state = flight_sim.advance(self.plane, self.path, self.wind, self.clouds,
-                                            self.star, self.w, self.h,
-                                            elapsed=self.flight_ticks * flight_sim.STEP,
-                                            gust=self.wind_gust,
-                                            gust_period=self.gust_period)
+                                            self.star, self.w, self.h)
             self.flight_ticks += 1
             position = (self.plane["x"], self.plane["y"])
             self.flight_distance += paths.distance(self.trajectory[-1], position)
@@ -238,16 +227,11 @@ class Game:
     def level_layout(self):
         """Detached launch conditions; camera and player input never go to Gemini."""
         return {"width": self.w, "height": self.h, "pad": self.pad, "star": self.star,
-                "wind": self.wind, "wind_gust": self.wind_gust,
-                "gust_period": self.gust_period,
+                "wind": self.wind,
                 "clouds": [dict(c) for c in self.cloud_layout]}
 
     def current_wind(self):
-        if self.state != "FLYING":
-            return self.wind
-        return flight_sim.wind_at(
-            self.wind, self.wind_gust, self.flight_ticks * flight_sim.STEP, self.gust_period
-        )
+        return self.wind
 
     def complete_delivery(self):
         elapsed = self.flight_ticks * flight_sim.STEP

@@ -135,6 +135,11 @@ def main():
       state.game = crashed;
       frame = replay.frame(state, 18100);
       check(frame && frame.elapsed === 0, 'AI replay starts after a crash');
+      frame = replay.frame(state, 18200);
+      check(frame.elapsed > 0, 'crash replay advances before restart');
+      replayButton.click(); frame = replay.frame(state, 18300);
+      check(frame.elapsed === 0 && frame.plane.x === path[0].x,
+        'replay button restarts Gemini flight after a crash');
       state.game = {...snapshot, state:'READY', comparison:null};
       check(replay.frame(state, 18200) === null, 'retry clears replay');
       state.game = structuredClone(snapshot);
@@ -253,6 +258,27 @@ def main():
         'finished planning updates status without another crash');
       for (let time = 24100; time <= 34000; time += 100) renderer.render(state,false,time);
       check(purplePixels() > 20, 'full purple route persists after replay');
+      context.fillText = (text,...args) => {labels.push(text); fillText(text,...args)};
+      const beforeReplayEvents = events.length;
+      for (const planning of [true, false]) {
+        ui.applySnapshot(state, {...crashSnapshot, comparison:{...crashSnapshot.comparison, planning}});
+        check(replayButton.textContent === 'Replay verified flight' && !replayButton.disabled,
+          'local verified flight can replay during and after planning');
+        replayButton.click();
+        labels.length = 0;
+        renderer.render(state, false, 34100);
+        check(labels.some(text => text.startsWith('Verified route safe route: 0.0 /')),
+          'verified flight button restarts rendered animation after a crash');
+        check(document.querySelector('#status-text').textContent.includes('verified flight'),
+          'replay status identifies the local verified flight');
+        labels.length = 0;
+        renderer.render(state, false, 34200);
+        check(labels.some(text => text.startsWith('Verified route safe route: 0.1 /')),
+          'restarted verified flight advances');
+      }
+      check(events.length === beforeReplayEvents && state.game.state === 'CRASHED',
+        'crash replay leaves the game and server events unchanged');
+      context.fillText = fillText;
       document.querySelector('#toast').classList.add('hidden');
       document.body.dataset.qa = 'passed';
     } catch(error) {document.body.dataset.qa = 'FAILED: ' + error.message;}
