@@ -68,6 +68,7 @@ export function createControls({ gamePanel, handButton, state, camera, queueEven
     toggle.title = state.freeDraw ? "Back to game (P)" : "Toggle free draw (P)";
     document.querySelector("#exit-free-draw").classList.toggle("hidden", !state.freeDraw);
     document.querySelector("#free-draw-tools").classList.toggle("hidden", !enabled);
+    document.querySelector("#mission-hud").classList.toggle("hidden", enabled);
     document.querySelector("#autopilot").disabled = enabled;
     document.querySelector("#comparison").classList.toggle("hidden", enabled || !state.game?.comparison);
     document.querySelector("#game-canvas").setAttribute("aria-label", enabled

@@ -1,6 +1,9 @@
+import { createMissionHUD } from "./hud.js";
+
 export function createUI({ canvas, statusText, toast }) {
   let toastTimeout = 0;
   const comparisonPanel = document.querySelector("#comparison");
+  const missionHUD = createMissionHUD();
 
   function updateComparison(result, visible) {
     comparisonPanel.classList.toggle("hidden", !visible);
@@ -59,6 +62,7 @@ export function createUI({ canvas, statusText, toast }) {
     const { game, selectedInput, input, freeDraw } = state;
     const changed = game?.state !== snapshot.state || game?.level !== snapshot.level;
     state.game = snapshot;
+    missionHUD.update(snapshot, freeDraw);
     updateComparison(snapshot.comparison, Boolean(snapshot.comparison) && !freeDraw);
     if (!freeDraw && snapshot.comparison?.status === "ready" && (changed || game?.comparison?.status !== "ready")) {
       showToast("Watch Gemini's purple drone fly its route. Your flight stays orange.", 5000);

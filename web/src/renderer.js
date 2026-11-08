@@ -209,64 +209,6 @@ export function createRenderer({ canvas, cameraVideo }) {
     }
   }
 
-  function drawHud(game) {
-    ctx.save();
-    ctx.textAlign = "left";
-    roundedRect(ctx, 18, 17, 130, 76, 8);
-    ctx.fillStyle = "rgba(10,31,43,.9)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,199,88,.65)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = "500 12px 'DM Mono', monospace";
-    ctx.fillText("MISSION", 34, 39);
-    ctx.fillStyle = "#ffc758";
-    ctx.font = "700 36px 'Space Grotesk', sans-serif";
-    ctx.fillText(String(game.level).padStart(2, "0"), 32, 79, 100);
-
-    roundedRect(ctx, 158, 17, 320, 76, 8);
-    ctx.fillStyle = "rgba(10,31,43,.75)";
-    ctx.fill();
-    const scoreRowY = 38;
-    const attemptsRowY = 69;
-    ctx.textBaseline = "middle";
-    ctx.font = "600 15px 'DM Sans', sans-serif";
-    ctx.fillStyle = "#ffe09a";
-    ctx.fillText(`SCORE: ${game.score}`, 174, scoreRowY);
-    ctx.fillStyle = "rgba(255,255,255,.72)";
-    ctx.font = "12px 'DM Sans', sans-serif";
-    ctx.fillText(`ATTEMPTS: ${game.tries}`, 174, attemptsRowY);
-
-    const windCenter = { x: 364, y: scoreRowY };
-    const length = Math.hypot(game.wind.x, game.wind.y);
-    const angle = length > 1 ? Math.atan2(game.wind.y, game.wind.x) : 0;
-    const halfLength = Math.min(40, 30 + length * 0.35) / 2;
-    const start = { x: windCenter.x - Math.cos(angle) * halfLength, y: windCenter.y - Math.sin(angle) * halfLength };
-    const end = { x: windCenter.x + Math.cos(angle) * halfLength, y: windCenter.y + Math.sin(angle) * halfLength };
-    ctx.strokeStyle = "rgba(255,255,255,.8)";
-    ctx.fillStyle = "rgba(255,255,255,.8)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(end.x, end.y);
-    ctx.lineTo(end.x - 9 * Math.cos(angle - 0.5), end.y - 9 * Math.sin(angle - 0.5));
-    ctx.lineTo(end.x - 9 * Math.cos(angle + 0.5), end.y - 9 * Math.sin(angle + 0.5));
-    ctx.closePath();
-    ctx.fill();
-    ctx.font = "500 14px 'DM Mono', monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("WIND", windCenter.x, attemptsRowY);
-    const gust = Math.hypot(game.windGust?.x ?? 0, game.windGust?.y ?? 0);
-    ctx.font = "10px 'DM Mono', monospace";
-    ctx.fillStyle = "rgba(102,216,235,.9)";
-    ctx.fillText(`GUST ±${gust.toFixed(0)}`, 430, attemptsRowY);
-    ctx.restore();
-  }
-
   function drawMessage(text) {
     ctx.save();
     ctx.fillStyle = "rgba(8,20,29,.26)";
@@ -423,7 +365,6 @@ export function createRenderer({ canvas, cameraVideo }) {
       ctx.fillText("GEMINI", replay.plane.x, replay.plane.y - 35);
       ctx.restore();
     }
-    drawHud(game);
     drawCursor(input);
     if (game.state === "LANDED") drawComparisonStatus(game, replay);
 
